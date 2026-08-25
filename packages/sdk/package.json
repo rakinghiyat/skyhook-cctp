@@ -1,0 +1,14 @@
+{
+  "name": "@skyhook/sdk",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "gate:gen-key": "node scripts/generate-arc-key.js",
+    "gate:burn": "node scripts/gate-burn.js"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^13.3.0",
+    "viem": "^2.21.0"
+  }
+}
