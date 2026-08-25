@@ -10,6 +10,10 @@ doctest = false
 
 [dependencies]
 soroban-sdk = { workspace = true }
+# Already pulled in transitively by soroban-sdk itself; declared directly here so
+# parse.rs can validate a strkey (no_std, panic-free `Result`) before handing it to
+# Address::from_string_bytes, which panics on anything that isn't a valid strkey.
+stellar-strkey = { version = "0.0.16", default-features = false }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }

@@ -26,7 +26,6 @@ Thumbs.db
 *.swp
 *.md
 !README.md
-brand/_*.png
 
 # Scratch output from gate/dev scripts — regenerable, not source.
 packages/*/scripts/.gate-*-result.json
