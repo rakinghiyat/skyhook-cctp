@@ -1,32 +1,30 @@
 // Permissionless, append-only handler registry: handler_id (u32) -> handler contract address.
 // Anyone may register a new id; nobody may rebind an id that's already bound
 // (docs/ARCHITECTURE.md §3) — that's what makes an id safe for a sender to encode.
-//
-// `resolve` isn't called from `execute()` yet — wiring it into the fallback ladder is the
-// next task. `#[allow(dead_code)]` is temporary until that call site exists.
-#![allow(dead_code)]
 use soroban_sdk::{Address, Env};
 
-// ~30 days of margin before the entry would expire, bumped to ~90 days on every write.
-// A resolve() miss (expired or never-registered) is safely absorbed by the fallback ladder
-// (ARCHITECTURE.md §4), so this is an availability choice, not a fund-safety one.
-const TTL_THRESHOLD_LEDGERS: u32 = 30 * 17280;
-const TTL_EXTEND_TO_LEDGERS: u32 = 90 * 17280;
+use crate::storage::DataKey;
+
+// TTL is bumped on write, not on read. A resolve() miss (expired or never-registered) is
+// safely absorbed by the fallback ladder (ARCHITECTURE.md §4), so this is an availability
+// choice, not a fund-safety one.
+use crate::storage::{TTL_EXTEND_TO_LEDGERS, TTL_THRESHOLD_LEDGERS};
 
 /// Registers `contract` under `id`. Panics if `id` is already bound.
 pub fn register_handler(env: &Env, id: u32, contract: Address) {
-    if env.storage().persistent().has(&id) {
+    let key = DataKey::Handler(id);
+    if env.storage().persistent().has(&key) {
         panic!("handler id already registered");
     }
-    env.storage().persistent().set(&id, &contract);
+    env.storage().persistent().set(&key, &contract);
     env.storage()
         .persistent()
-        .extend_ttl(&id, TTL_THRESHOLD_LEDGERS, TTL_EXTEND_TO_LEDGERS);
+        .extend_ttl(&key, TTL_THRESHOLD_LEDGERS, TTL_EXTEND_TO_LEDGERS);
 }
 
 /// Resolves `id` to its registered handler address, if any.
 pub fn resolve(env: &Env, id: u32) -> Option<Address> {
-    env.storage().persistent().get(&id)
+    env.storage().persistent().get(&DataKey::Handler(id))
 }
 
 #[cfg(test)]

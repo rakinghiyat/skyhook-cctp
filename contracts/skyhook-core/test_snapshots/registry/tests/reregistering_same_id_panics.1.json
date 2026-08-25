@@ -25,7 +25,14 @@
               "ext": "v0",
               "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M",
               "key": {
-                "u32": 1
+                "vec": [
+                  {
+                    "symbol": "Handler"
+                  },
+                  {
+                    "u32": 1
+                  }
+                ]
               },
               "durability": "persistent",
               "val": {

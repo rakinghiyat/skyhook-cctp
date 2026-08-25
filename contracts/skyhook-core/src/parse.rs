@@ -10,10 +10,12 @@
 // next task. Fully built and tested here; `#[allow(dead_code)]` is temporary until that call
 // site exists.
 #![allow(dead_code)]
-use soroban_sdk::{Address, Bytes, Env};
+use soroban_sdk::{Address, Bytes, BytesN, Env};
 
 // --- CCTP v2 outer message (Circle's frame) ---
 const OUTER_HEADER_LEN: u32 = 148; // version..finalityThresholdExecuted, all fixed-width
+const NONCE_OFFSET: u32 = 12;
+const NONCE_LEN: u32 = 32;
 const BODY_FIXED_LEN: u32 = 228; // messageBody's version..expirationBlock, fixed-width
 // hookData = message[OUTER_HEADER_LEN + BODY_FIXED_LEN ..], derived, never hardcoded as 376.
 const HOOK_DATA_OFFSET: u32 = OUTER_HEADER_LEN + BODY_FIXED_LEN;
@@ -58,6 +60,19 @@ pub fn parse(_env: &Env, message: &Bytes) -> Parsed {
         Some(envelope) => parse_envelope(&envelope),
         None => Parsed::Malformed { fallback_recipient: None },
     }
+}
+
+/// The CCTP nonce, read straight from the outer message header. Available regardless of how
+/// corrupt the hook data or instruction turns out to be, which is what makes it usable as the
+/// last-resort `unresolved` key (ARCHITECTURE.md §4, Level 3).
+pub fn nonce(message: &Bytes) -> Option<BytesN<32>> {
+    if message.len() < NONCE_OFFSET + NONCE_LEN {
+        return None;
+    }
+    message
+        .slice(NONCE_OFFSET..NONCE_OFFSET + NONCE_LEN)
+        .try_into()
+        .ok()
 }
 
 /// message -> hookData, bounds-checked against the fixed CCTP frame length.
@@ -182,44 +197,10 @@ fn read_u16_be(b: &Bytes, at: u32) -> Option<u16> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixtures::{
+        envelope as well_formed_envelope, hook_frame, message as build_message, message_with_hook,
+    };
     use soroban_sdk::testutils::Address as _;
-    use std::string::ToString;
-
-    /// Builds a realistic raw CCTP message: dummy (but correctly-sized) outer header and
-    /// messageBody fixed fields, real Circle hook-frame, and the given Skyhook envelope bytes
-    /// appended after `forwardRecipient`.
-    fn build_message(env: &Env, forward_recipient: &Address, envelope: &[u8]) -> Bytes {
-        let mut msg = std::vec![0u8; OUTER_HEADER_LEN as usize + BODY_FIXED_LEN as usize];
-        // header/messageBody fixed fields are irrelevant to parse.rs — left zeroed.
-
-        let recipient_str = forward_recipient.to_string();
-        let recipient_bytes = strkey_ascii(env, &recipient_str.to_string());
-        let l = recipient_bytes.len() as u32;
-
-        let mut hook = std::vec![0u8; 24]; // magic
-        hook.extend_from_slice(&0u32.to_be_bytes()); // hook version
-        hook.extend_from_slice(&l.to_be_bytes()); // L
-        hook.extend_from_slice(&recipient_bytes);
-        hook.extend_from_slice(envelope);
-
-        msg.extend_from_slice(&hook);
-        Bytes::from_slice(env, &msg)
-    }
-
-    // soroban_sdk::String doesn't expose a std String directly in no_std builds used by the
-    // contract, but tests run under std — this helper bridges that for fixture-building only.
-    fn strkey_ascii(_env: &Env, s: &std::string::String) -> std::vec::Vec<u8> {
-        s.as_bytes().to_vec()
-    }
-
-    fn well_formed_envelope(fallback_recipient: &Address, handler_id: u32, params: &[u8]) -> std::vec::Vec<u8> {
-        let mut e = std::vec![ENV_VERSION];
-        e.extend_from_slice(fallback_recipient.to_string().to_string().as_bytes());
-        e.extend_from_slice(&handler_id.to_be_bytes());
-        e.extend_from_slice(&(params.len() as u16).to_be_bytes());
-        e.extend_from_slice(params);
-        e
-    }
 
     #[test]
     fn parses_well_formed_instruction() {
@@ -310,15 +291,9 @@ mod tests {
         let forwarder = Address::generate(&env);
         let recipient = Address::generate(&env);
         let envelope = well_formed_envelope(&recipient, 1, &[]);
-        let mut msg_vec = std::vec![0u8; OUTER_HEADER_LEN as usize + BODY_FIXED_LEN as usize];
-        // Corrupt magic: first byte non-zero.
-        let mut hook = std::vec![1u8; 24];
-        hook.extend_from_slice(&0u32.to_be_bytes());
-        hook.extend_from_slice(&56u32.to_be_bytes());
-        hook.extend_from_slice(forwarder.to_string().to_string().as_bytes());
-        hook.extend_from_slice(&envelope);
-        msg_vec.extend_from_slice(&hook);
-        let msg = Bytes::from_slice(&env, &msg_vec);
+        let mut hook = hook_frame(&forwarder, &envelope);
+        hook[0] = 1; // corrupt the magic: it must be all zero
+        let msg = message_with_hook(&env, &hook);
 
         assert_eq!(
             parse(&env, &msg),
