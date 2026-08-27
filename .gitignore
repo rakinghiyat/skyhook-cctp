@@ -27,5 +27,5 @@ Thumbs.db
 *.md
 !README.md
 
-# Scratch output from gate/dev scripts — regenerable, not source.
-packages/*/scripts/.gate-*-result.json
+# Scratch output from run scripts (burn results, attestations) — regenerable, not source.
+packages/*/scripts/.*.json

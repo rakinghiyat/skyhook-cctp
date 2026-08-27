@@ -36,6 +36,16 @@ pub struct Unresolved {
     pub amount: i128,
 }
 
+/// Emitted when a recipient recovers funds that had come to rest at Level 3. `to` differs from
+/// `recipient` when the payout was redirected to an address that could actually receive.
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct UnresolvedClaimed {
+    pub recipient: Address,
+    pub to: Address,
+    pub amount: i128,
+}
+
 #[contract]
 pub struct SkyhookCore;
 
@@ -117,6 +127,47 @@ impl SkyhookCore {
             .persistent()
             .get(&DataKey::UnresolvedByNonce(nonce))
             .unwrap_or(0)
+    }
+
+    /// The way out of Level 3: the recipient the funds were recorded against collects them,
+    /// paying to `to` — their own address in the ordinary case, or a provisioned one if their
+    /// own still cannot receive.
+    ///
+    /// Without this, "the funds are never lost" would be true only in the narrowest sense:
+    /// they would sit in this contract permanently, out of everyone's reach
+    /// (`ARCHITECTURE.md` §4 says they sit here *until claimed* — this is the claiming).
+    ///
+    /// **Funds recorded against a CCTP nonce rather than a recipient cannot be recovered
+    /// through here, or anywhere else.** That case only arises when an instruction was too
+    /// malformed to yield a recipient at all, and nobody can prove a nonce belongs to them.
+    /// Letting someone withdraw them would mean appointing an authority to decide who — which
+    /// is precisely the admin key this contract is built not to have. See `SPEC.md` §2.
+    pub fn claim_unresolved(env: Env, recipient: Address, to: Address) {
+        recipient.require_auth();
+
+        let key = DataKey::UnresolvedByRecipient(recipient.clone());
+        let amount: i128 = env.storage().persistent().get(&key).unwrap_or(0);
+        if amount <= 0 {
+            panic!("nothing unresolved for this recipient");
+        }
+
+        // Clear before paying out. If the payout fails — a recipient without a USDC trustline
+        // being the expected case — the whole invocation reverts and the record is restored.
+        env.storage().persistent().remove(&key);
+
+        let token: Address = env.storage().instance().get(&TOKEN).unwrap();
+        token::TokenClient::new(&env, &token).transfer(
+            &env.current_contract_address(),
+            &to,
+            &amount,
+        );
+
+        UnresolvedClaimed {
+            recipient,
+            to,
+            amount,
+        }
+        .publish(&env);
     }
 }
 

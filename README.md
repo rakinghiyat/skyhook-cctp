@@ -1,6 +1,6 @@
 <div align="center">
   <h1>Skyhook</h1>
-  <p>The execution layer for <a href="https://developers.circle.com/cctp">CCTP</a> hooks on <a href="https://stellar.org">Stellar</a> — so USDC does something the moment it lands.</p>
+  <p>The execution layer for <a href="https://developers.circle.com/cctp">CCTP</a> hooks on <a href="https://stellar.org">Stellar</a> - so USDC does something the moment it lands.</p>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache-E38B40.svg" alt="License"></a>
   <img src="https://img.shields.io/badge/Soroban-Rust-858585.svg" alt="Soroban / Rust">
   <img src="https://img.shields.io/badge/SDK-TypeScript-3178c6.svg" alt="TypeScript">

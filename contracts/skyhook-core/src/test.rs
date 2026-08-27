@@ -330,6 +330,100 @@ fn level_3_emits_unresolved_event() {
 }
 
 // ---------------------------------------------------------------------------------------
+// Recovering from Level 3
+// ---------------------------------------------------------------------------------------
+
+#[test]
+fn recipient_can_recover_funds_stranded_at_level_3() {
+    let rig = Rig::new();
+    rig.arm();
+    rig.execute_naming(1); // nothing registered, so this lands at Level 3
+    assert_eq!(rig.client().unresolved_by_recipient(&rig.recipient), MINTED);
+
+    rig.env.mock_all_auths(); // stands in for the recipient's signature
+    rig.client()
+        .claim_unresolved(&rig.recipient, &rig.recipient);
+
+    assert_eq!(rig.balance(&rig.recipient), MINTED, "the funds must actually arrive");
+    assert_eq!(rig.client().unresolved_by_recipient(&rig.recipient), 0);
+    assert_eq!(rig.balance(&rig.core), 0, "nothing left stranded");
+}
+
+#[test]
+fn recovery_can_be_redirected_to_a_provisioned_address() {
+    let rig = Rig::new();
+    let provisioned = Address::generate(&rig.env);
+    rig.arm();
+    rig.execute_naming(1);
+
+    rig.env.mock_all_auths();
+    rig.client().claim_unresolved(&rig.recipient, &provisioned);
+
+    assert_eq!(rig.balance(&provisioned), MINTED);
+    assert_eq!(rig.balance(&rig.recipient), 0);
+}
+
+#[test]
+fn recovery_requires_the_recipients_authorization() {
+    let rig = Rig::new();
+    let attacker_destination = Address::generate(&rig.env);
+    rig.arm();
+    rig.execute_naming(1);
+
+    let result = rig
+        .client()
+        .try_claim_unresolved(&rig.recipient, &attacker_destination);
+
+    assert!(result.is_err(), "stranded funds still belong to the recipient");
+    assert_eq!(rig.balance(&attacker_destination), 0);
+    assert_eq!(rig.client().unresolved_by_recipient(&rig.recipient), MINTED);
+}
+
+#[test]
+fn recovery_with_nothing_stranded_is_rejected() {
+    let rig = Rig::new();
+    rig.arm();
+    rig.env.mock_all_auths();
+
+    let result = rig
+        .client()
+        .try_claim_unresolved(&rig.recipient, &rig.recipient);
+
+    assert!(result.is_err());
+}
+
+/// Pins down the known limitation rather than leaving it implicit: when an instruction was too
+/// malformed to yield a recipient, the funds are keyed by CCTP nonce and *nobody* can recover
+/// them. Recovering them would require an authority to decide who is entitled — the admin key
+/// this contract is built not to have. If this test ever starts failing, that trade-off has
+/// been changed and needs a deliberate decision.
+#[test]
+fn nonce_keyed_funds_are_unrecoverable_by_design() {
+    let rig = Rig::new();
+    rig.arm();
+
+    // Too short to yield a fallback_recipient at all.
+    let envelope = std::vec![0x01u8; 10];
+    let message = fixtures::message(&rig.env, &rig.core, &envelope);
+    rig.client().execute(&message, &Bytes::new(&rig.env));
+
+    assert_eq!(
+        rig.client()
+            .unresolved_by_nonce(&fixtures::test_nonce(&rig.env)),
+        MINTED,
+        "the funds are recorded, just not attributable"
+    );
+
+    // No recipient was ever recorded, so there is no one for the recovery path to pay.
+    rig.env.mock_all_auths();
+    let result = rig
+        .client()
+        .try_claim_unresolved(&rig.recipient, &rig.recipient);
+    assert!(result.is_err());
+    assert_eq!(rig.balance(&rig.core), MINTED, "and so they stay here");
+}
+
+// ---------------------------------------------------------------------------------------
 // Authorization is scoped to exactly one pull
 // ---------------------------------------------------------------------------------------
 
