@@ -832,6 +832,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "handler-deposit"
+version = "0.0.0"
+dependencies = [
+ "reference-vault",
+ "soroban-sdk",
+ "stellar-strkey 0.0.16",
+]
+
+[[package]]
 name = "handler-hold"
 version = "0.0.0"
 dependencies = [
@@ -1314,6 +1323,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "reference-vault"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+ "stellar-tokens",
+]
+
+[[package]]
 name = "rfc6979"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1634,6 +1651,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "soroban-poseidon"
+version = "27.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b241822373adc51c23d5412e412b3b91b0d6b6bba146584946391aa32667820d"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
 name = "soroban-sdk"
 version = "27.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1748,6 +1774,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
+name = "stellar-contract-utils"
+version = "0.7.1"
+source = "git+https://github.com/OpenZeppelin/stellar-contracts?rev=fbfde388e1b72afa93d6b1c922067879b20e81db#fbfde388e1b72afa93d6b1c922067879b20e81db"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "stellar-governance"
+version = "0.7.1"
+source = "git+https://github.com/OpenZeppelin/stellar-contracts?rev=fbfde388e1b72afa93d6b1c922067879b20e81db#fbfde388e1b72afa93d6b1c922067879b20e81db"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
 name = "stellar-strkey"
 version = "0.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1766,6 +1808,17 @@ dependencies = [
  "crate-git-revision 0.0.6",
  "data-encoding",
  "heapless",
+]
+
+[[package]]
+name = "stellar-tokens"
+version = "0.7.1"
+source = "git+https://github.com/OpenZeppelin/stellar-contracts?rev=fbfde388e1b72afa93d6b1c922067879b20e81db#fbfde388e1b72afa93d6b1c922067879b20e81db"
+dependencies = [
+ "soroban-poseidon",
+ "soroban-sdk",
+ "stellar-contract-utils",
+ "stellar-governance",
 ]
 
 [[package]]

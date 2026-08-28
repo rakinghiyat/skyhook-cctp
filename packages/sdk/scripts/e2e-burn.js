@@ -7,7 +7,7 @@ import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { loadEnv, repoRoot } from "./env.js";
 import { buildHookData, toHex } from "./hook-data.js";
-import { buildInstruction } from "./instruction.js";
+import { buildInstruction, depositParams } from "./instruction.js";
 
 const env = loadEnv();
 
@@ -35,12 +35,21 @@ async function main() {
   // Defaults to the Freighter demo account — a recipient that cannot yet receive USDC, which
   // is the case Hold exists for. Override with RECIPIENT=G... to aim somewhere else.
   const recipient = process.env.RECIPIENT || env.FREIGHTER_RECIPIENT || env.RELAYER_PUBLIC_KEY;
-  const instruction = buildInstruction(recipient, handlerId);
+
+  // Deposit (handler_id 1) carries the vault address in params; every other handler here
+  // carries none. VAULT=C... overrides the vault, including with a deliberately wrong one.
+  const params =
+    handlerId === 1
+      ? depositParams(process.env.VAULT || env.REFERENCE_VAULT_ID)
+      : new Uint8Array(0);
+
+  const instruction = buildInstruction(recipient, handlerId, params);
   const hookData = toHex(buildHookData(env.SKYHOOK_CORE_ID, instruction));
 
   console.log("core:            ", env.SKYHOOK_CORE_ID);
   console.log("handler_id:      ", handlerId);
   console.log("fallback_recipient:", recipient);
+  if (params.length) console.log("vault:           ", new TextDecoder().decode(params));
   console.log("instruction bytes:", instruction.length);
 
   const approveTx = await walletClient.writeContract({

@@ -1,0 +1,19 @@
+[package]
+name = "handler-deposit"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["lib", "cdylib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+# Only needed to validate a strkey before handing it to Address::from_string_bytes, which
+# panics on anything invalid. Same reason skyhook-core depends on it.
+stellar-strkey = { version = "0.0.16", default-features = false }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+reference-vault = { path = "../reference-vault" }

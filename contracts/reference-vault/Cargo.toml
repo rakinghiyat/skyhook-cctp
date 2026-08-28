@@ -1,0 +1,20 @@
+[package]
+name = "reference-vault"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["lib", "cdylib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+# Pinned to a commit rather than a crates.io release on purpose: every published version of
+# stellar-tokens, including v0.8.0-rc.3, still targets soroban-sdk 26.1, while this workspace
+# and stellar-cli are on 27. Only the unreleased main branch has moved to 27.0.2. Pinning the
+# exact revision keeps the build reproducible; revisit once a 27-compatible version ships.
+stellar-tokens = { git = "https://github.com/OpenZeppelin/stellar-contracts", rev = "fbfde388e1b72afa93d6b1c922067879b20e81db" }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
