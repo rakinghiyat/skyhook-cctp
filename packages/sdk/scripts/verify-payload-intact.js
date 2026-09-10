@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { loadEnv, repoRoot } from "./env.js";
-import { buildHookData, toHex } from "./hook-data.js";
+import { buildHookData, toHex } from "../src/hook-data.js";
 
 const env = loadEnv();
 const attestation = JSON.parse(

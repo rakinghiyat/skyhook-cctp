@@ -1,0 +1,17 @@
+{
+  "name": "@skyhook/relayer",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "bin": {
+    "relay": "src/cli.js"
+  },
+  "scripts": {
+    "test": "node --test test/",
+    "relay": "node src/cli.js"
+  },
+  "dependencies": {
+    "@skyhook/sdk": "*",
+    "@stellar/stellar-sdk": "^17.0.1"
+  }
+}

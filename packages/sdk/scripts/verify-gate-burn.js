@@ -2,7 +2,7 @@
 // programmatically instead of eyeballing printed hex.
 import { StrKey } from "@stellar/stellar-sdk";
 import { loadEnv } from "./env.js";
-import { buildHookData, toHex } from "./hook-data.js";
+import { buildHookData, toHex } from "../src/hook-data.js";
 
 const env = loadEnv();
 

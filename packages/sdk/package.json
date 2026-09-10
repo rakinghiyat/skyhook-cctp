@@ -3,12 +3,17 @@
   "private": true,
   "type": "module",
   "version": "0.0.1",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
   "scripts": {
+    "test": "node --test test/",
     "gate:gen-key": "node scripts/generate-arc-key.js",
     "gate:burn": "node scripts/gate-burn.js"
   },
   "dependencies": {
-    "@stellar/stellar-sdk": "^13.3.0",
+    "@stellar/stellar-sdk": "^17.0.1",
     "viem": "^2.21.0"
   }
 }

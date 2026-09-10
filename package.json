@@ -1,0 +1,7 @@
+{
+  "name": "skyhook",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ]
+}
