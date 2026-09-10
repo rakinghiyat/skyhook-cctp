@@ -67,6 +67,27 @@ impl HandlerDeposit {
         let token: Address = env.storage().instance().get(&TOKEN).unwrap();
         let me = env.current_contract_address();
 
+        // Check the destination before touching the funds (SPEC.md §4, "validate before you
+        // collect"). Two things are settled here at once:
+        //
+        //   - Something with no `query_asset` is not a SEP-56 vault, and the call traps.
+        //   - A vault whose underlying asset is not what we were handed would take this USDC
+        //     and mint shares denominated in something else. Refusing is the correct answer,
+        //     not a nicety.
+        //
+        // Doing this first also keeps a rejection cheap. The fallback ladder runs inside one
+        // invocation with a finite budget, and work done before failing is still charged for;
+        // a handler that collects funds and only then discovers the destination is wrong can
+        // exhaust the budget and take the whole transaction down. See ARCHITECTURE.md §4.
+        let vault_asset: Address = env.invoke_contract(
+            &vault,
+            &Symbol::new(&env, "query_asset"),
+            soroban_sdk::Vec::new(&env),
+        );
+        if vault_asset != token {
+            panic!("vault's underlying asset is not the token being delivered");
+        }
+
         // Collect what the core authorized.
         token::TokenClient::new(&env, &token).transfer(&core, &me, &amount);
 

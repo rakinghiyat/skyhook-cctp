@@ -192,6 +192,43 @@ fn a_params_naming_something_that_is_not_a_vault_fails() {
     assert_eq!(rig.shares(&rig.recipient), 0);
 }
 
+/// A real, working vault — for the wrong asset. Before the handler checked `query_asset`, this
+/// deposit would have gone through: the vault would have taken the USDC and minted the recipient
+/// shares denominated in a different asset entirely.
+#[test]
+fn a_vault_for_a_different_asset_is_refused() {
+    let rig = Rig::new();
+    let other_admin = Address::generate(&rig.env);
+    let other_token = rig
+        .env
+        .register_stellar_asset_contract_v2(other_admin)
+        .address();
+    let wrong_vault = rig.env.register(
+        ReferenceVault,
+        (
+            String::from_str(&rig.env, "Some Other Vault"),
+            String::from_str(&rig.env, "skOTHER"),
+            other_token,
+            0u32,
+        ),
+    );
+    rig.arm();
+
+    let result = MockCoreClient::new(&rig.env, &rig.core).try_run(
+        &rig.handler,
+        &rig.recipient,
+        &DELIVERED,
+        &rig.params_for(&wrong_vault),
+    );
+
+    assert!(
+        result.is_err(),
+        "a vault for another asset must be refused, not quietly deposited into"
+    );
+    assert_eq!(rig.usdc(&rig.handler), 0, "and nothing may have been collected");
+    assert_eq!(rig.usdc(&wrong_vault), 0);
+}
+
 #[test]
 fn params_of_the_wrong_length_fails() {
     let rig = Rig::new();
