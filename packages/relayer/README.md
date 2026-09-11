@@ -46,18 +46,12 @@ Read from the repo-root `.env`:
 | `SKYHOOK_CORE_ID` | The core contract to submit to |
 | `RELAYER_SECRET_KEY` | Pays the invocation fee. Populate with `./scripts/fill-stellar-keys.sh` |
 
-## Networks that hijack DNS
+## If attestation fetches fail TLS verification
 
-Some ISPs intercept DNS for whole domains and answer with their own filter, which then presents
-its own certificate — ordinary `fetch` fails TLS verification, correctly. This was encountered
-during development for the entire `circle.com` domain.
+Some networks intercept DNS for entire domains and answer with their own filter, which then
+presents its own certificate — `fetch` fails with `CERT_HAS_EXPIRED` or similar. The relayer
+detects that, re-resolves over DNS-over-HTTPS, and dials the real address with the correct SNI.
 
-The relayer detects that failure and retries by resolving the hostname over DNS-over-HTTPS, then
-dialling that address with the right SNI. **Certificate verification stays on throughout.**
-
-That distinction matters and is deliberate: pinned resolution changes *which address is dialled*,
-never *whether the peer is trusted*. An attestation is the proof that authorizes a mint. Accepting
-one from an unverified peer would defeat the entire point of verifying it, so this code path must
-never be "fixed" by disabling verification.
-
-On a normal network none of this engages.
+**Certificate verification stays on throughout.** Pinned resolution changes which address is
+dialled, never whether the peer is trusted — an attestation authorizes a mint, so this path must
+never be "fixed" by disabling verification. On a normal network none of it engages.
