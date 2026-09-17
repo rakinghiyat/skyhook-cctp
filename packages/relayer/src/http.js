@@ -1,33 +1,58 @@
-// An HTTPS client that survives a network hijacking the DNS for the host it needs.
+// An HTTPS client that survives networks which interfere with the host it needs to reach.
 //
-// Some ISPs — the one this was developed on among them — intercept DNS for whole domains and
-// answer with their own filter address, which then presents a certificate for the filter rather
-// than the site. Ordinary `fetch` fails TLS verification, correctly.
+// Two distinct kinds of interference have been observed in practice, and they need different
+// answers:
 //
-// The fix is to resolve the name somewhere the ISP cannot rewrite (DNS-over-HTTPS) and dial that
-// address with the right SNI. **Certificate verification stays on.** Pinned resolution changes
-// which address we dial; it does not change whether we trust what answers. An attestation is the
-// proof that authorizes a mint — accepting one from an unverified peer would defeat its purpose
-// entirely, so this never disables verification and must never be made to.
+//   1. DNS hijacking — the resolver answers with a filter's address, which then presents a
+//      certificate for the filter rather than the site. TLS verification fails, correctly.
+//      Answer: resolve the name over DNS-over-HTTPS, which the network cannot rewrite, and dial
+//      that address with the right SNI.
+//
+//   2. Connection resets — the address is right, but the connection is killed mid-handshake,
+//      apparently on the hostname in the TLS ClientHello. Answer: retry. Measured on the network
+//      this was developed on, roughly two thirds of attempts get through, so a few retries turn
+//      a hard failure into a brief delay.
+//
+// **Certificate verification stays on in both paths.** Pinned resolution changes which address is
+// dialled, never whether the peer is trusted. An attestation authorizes a mint, so accepting one
+// from an unverified peer would defeat the entire purpose of checking it — this code must never
+// be "fixed" by disabling verification.
 import https from "node:https";
 import { setTimeout as sleep } from "node:timers/promises";
 
 const DOH = "https://cloudflare-dns.com/dns-query";
 
-/** Resolves a hostname over DNS-over-HTTPS, following one level of CNAME. */
-async function resolveOverDoh(hostname) {
-  for (const name of [hostname]) {
-    const res = await fetch(`${DOH}?name=${encodeURIComponent(name)}&type=A`, {
-      headers: { accept: "application/dns-json" },
-    });
-    const body = await res.json();
-    const answers = body.Answer ?? [];
-    const a = answers.filter((x) => x.type === 1).map((x) => x.data);
-    if (a.length) return a;
-    const cname = answers.find((x) => x.type === 5)?.data;
-    if (cname) return resolveOverDoh(cname.replace(/\.$/, ""));
-  }
-  return [];
+/** Transient at the network layer — worth another attempt. */
+const RETRYABLE = new Set([
+  "ECONNRESET",
+  "ETIMEDOUT",
+  "ECONNREFUSED",
+  "EAI_AGAIN",
+  "UND_ERR_CONNECT_TIMEOUT",
+  "UND_ERR_SOCKET",
+]);
+
+/** The resolver is lying to us — a different address is needed, not another attempt. */
+const HIJACKED = new Set([
+  "CERT_HAS_EXPIRED",
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  "SELF_SIGNED_CERT_IN_CHAIN",
+]);
+
+const codeOf = (err) => err?.cause?.code ?? err?.code;
+
+async function resolveOverDoh(hostname, depth = 0) {
+  if (depth > 2) return [];
+  const res = await fetch(`${DOH}?name=${encodeURIComponent(hostname)}&type=A`, {
+    headers: { accept: "application/dns-json" },
+  });
+  const body = await res.json();
+  const answers = body.Answer ?? [];
+  const a = answers.filter((x) => x.type === 1).map((x) => x.data);
+  if (a.length) return a;
+  const cname = answers.find((x) => x.type === 5)?.data;
+  return cname ? resolveOverDoh(cname.replace(/\.$/, ""), depth + 1) : [];
 }
 
 function requestTo(ip, url, { method = "GET", timeoutMs = 20000 } = {}) {
@@ -56,41 +81,56 @@ function requestTo(ip, url, { method = "GET", timeoutMs = 20000 } = {}) {
 }
 
 /**
- * Fetches JSON, falling back to pinned resolution when ordinary DNS has been tampered with.
- * On a normal network the first attempt succeeds and none of this machinery is used.
+ * Fetches JSON, retrying transient failures and falling back to pinned resolution when the
+ * resolver has been tampered with. On a healthy network the first attempt succeeds and none of
+ * this machinery runs.
  */
-export async function fetchJson(url, { method = "GET", attempts = 3, log = () => {} } = {}) {
-  try {
-    const res = await fetch(url, { method });
-    return { status: res.status, json: await res.json().catch(() => null) };
-  } catch (err) {
-    const hijacked =
-      err?.cause?.code === "CERT_HAS_EXPIRED" ||
-      err?.cause?.code === "ERR_TLS_CERT_ALTNAME_INVALID" ||
-      err?.cause?.code === "UNABLE_TO_VERIFY_LEAF_SIGNATURE";
-    if (!hijacked) throw err;
+export async function fetchJson(url, { method = "GET", attempts = 5, log = () => {} } = {}) {
+  const hostname = new URL(url).hostname;
+  let pinned = null;
+  let lastErr;
 
-    const hostname = new URL(url).hostname;
-    log(
-      `  DNS for ${hostname} appears hijacked (${err.cause.code}); resolving over DoH instead ` +
-        `— certificate verification stays on`
-    );
-    const ips = await resolveOverDoh(hostname);
-    if (!ips.length) throw new Error(`could not resolve ${hostname} over DoH`);
-    log(`  resolved ${hostname} -> ${ips.join(", ")}`);
-
-    let lastErr;
-    for (let i = 0; i < attempts; i++) {
-      for (const ip of ips) {
-        try {
-          const { status, body } = await requestTo(ip, url, { method });
-          return { status, json: body ? JSON.parse(body) : null };
-        } catch (e) {
-          lastErr = e;
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      if (pinned) {
+        for (const ip of pinned) {
+          try {
+            const { status, body } = await requestTo(ip, url, { method });
+            return { status, json: body ? JSON.parse(body) : null };
+          } catch (e) {
+            lastErr = e;
+          }
         }
+        throw lastErr;
       }
-      await sleep(1500);
+      const res = await fetch(url, { method });
+      return { status: res.status, json: await res.json().catch(() => null) };
+    } catch (err) {
+      lastErr = err;
+      const code = codeOf(err);
+
+      if (HIJACKED.has(code) && !pinned) {
+        log(`  ${hostname}: ${code} — the resolver is answering with someone else's address`);
+        pinned = await resolveOverDoh(hostname);
+        if (!pinned.length) throw new Error(`could not resolve ${hostname} over DoH`);
+        log(`  resolved over DoH to ${pinned.join(", ")}; certificate verification stays on`);
+        continue; // retry immediately with the real address
+      }
+
+      if (!RETRYABLE.has(code) && !HIJACKED.has(code)) {
+        throw new Error(`${hostname}: ${err.message}${code ? ` (${code})` : ""}`);
+      }
+
+      if (i === attempts) break;
+      const wait = 1000 * i;
+      log(`  ${hostname}: ${code}, retrying in ${wait}ms (${i}/${attempts})`);
+      await sleep(wait);
     }
-    throw lastErr ?? new Error(`could not reach ${hostname}`);
   }
+
+  const code = codeOf(lastErr);
+  throw new Error(
+    `${hostname}: gave up after ${attempts} attempts — ${lastErr?.message}` +
+      `${code ? ` (${code})` : ""}`
+  );
 }

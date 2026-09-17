@@ -192,8 +192,9 @@ stellar contract build
 
 ## Status
 
-Testnet only. This is an Instawards-funded engagement and has **not been audited**; a security
-audit is planned before any mainnet deployment.
+**Stellar Testnet only, and not audited.** These contracts hold funds and have had no third-party
+security review; a review is planned before any mainnet deployment. Do not deploy this to mainnet
+as it stands.
 
 `claim()` inside a fee-bumped envelope — letting a recipient sign without spending XLM — is
 implemented at the contract level but not yet demonstrated end to end. The Freighter claim page

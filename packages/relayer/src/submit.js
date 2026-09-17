@@ -51,7 +51,7 @@ export async function submitExecute({
 
   const simulated = await server.simulateTransaction(built);
   if (rpc.Api.isSimulationError(simulated)) {
-    throw new Error(`simulation failed: ${simulated.error}`);
+    throw new Error(explainSimulationError(simulated.error));
   }
   log(`  simulated; min resource fee ${simulated.minResourceFee}`);
 
@@ -110,4 +110,29 @@ async function confirmViaHorizon({ horizonUrl, hash, timeoutMs = 90_000, log }) 
     await new Promise((r) => setTimeout(r, 2000));
   }
   return false;
+}
+
+/**
+ * Turns a contract error code into something that says what to do about it.
+ *
+ * A raw `Error(Contract, #6908)` buried in a page of XDR tells an operator nothing, and the
+ * commonest case — relaying a burn that already landed — is not a fault at all. Naming it is
+ * the difference between "something broke" and "this is already done".
+ */
+function explainSimulationError(raw) {
+  const text = String(raw);
+  const code = text.match(/Error\(Contract, #(\d+)\)/)?.[1];
+
+  // From circlefin/stellar-cctp, message-transmitter-v2: NonceAlreadyUsed = 6908.
+  if (code === "6908") {
+    return (
+      "this burn has already been relayed — CCTP refuses to process the same message twice " +
+      "(NonceAlreadyUsed). Nothing is wrong and nothing needs resubmitting; check the recipient's " +
+      "balance to see the result of the run that succeeded."
+    );
+  }
+
+  return code
+    ? `simulation failed with contract error #${code}: ${text}`
+    : `simulation failed: ${text}`;
 }
