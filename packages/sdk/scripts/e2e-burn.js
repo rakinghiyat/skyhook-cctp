@@ -28,7 +28,8 @@ const tokenMessengerAbi = parseAbi([
 ]);
 
 async function main() {
-  const amount = 1_000_000n;
+  // USDC has six decimals on the source chain; AMOUNT is in whole USDC.
+  const amount = BigInt(Math.round(Number(process.env.AMOUNT ?? 1) * 1_000_000));
   const handlerId = Number(process.argv[2] ?? 1);
 
   const forwarderBytes32 = toHex(StrKey.decodeContract(env.CCTP_FORWARDER_ID));

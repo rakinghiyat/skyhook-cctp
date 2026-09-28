@@ -91,6 +91,31 @@ and takes no custody; you can run your own or rely on any other operator.
 The recipient ends up holding vault shares. **No USDC trustline is required** — shares live in
 the vault's own storage, so Deposit reaches recipients that a plain USDC payout cannot.
 
+### 4. Confirm it landed
+
+The relayer prints a transaction hash, but the honest check is the recipient's position, read
+back from the vault itself:
+
+```bash
+stellar contract invoke --id <vault> --source <any-funded-account> \
+  --network testnet --send=no -- balance --account <recipient>
+```
+
+It should have risen by the delivered amount, at Stellar's 7 decimals — 1 USDC burned arrives as
+`10000000`. Because vault shares are a Soroban token rather than a classic asset, a wallet will
+not list them until the vault's contract id is added as a custom token; the balance above is
+there either way.
+
+If the instruction fell back to Hold instead, the amount is waiting under the recipient's name:
+
+```bash
+stellar contract invoke --id <handler-hold> --source <any-funded-account> \
+  --network testnet --send=no -- held --recipient <recipient>
+```
+
+Both calls are read-only (`--send=no`), cost nothing, and can be run by anyone — you do not need
+the recipient's key to look.
+
 ## Reading a message back
 
 Circle's Get Messages endpoint returns **every address field as `null`** for Stellar messages —
