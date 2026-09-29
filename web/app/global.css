@@ -1,0 +1,204 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+/* The brand's two accents, sampled from the logo rather than guessed: the hook is #296FFF, the
+   ball runs #16C65C → #2AD46B, and the banner's field is #343ECE. Blue carries actions, green
+   carries confirmation — the same division the mark itself makes. */
+:root {
+  --brand-blue: #296fff;
+  --brand-blue-deep: #343ece;
+  --brand-green: #16c65c;
+  --brand-green-bright: #2ad46b;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   The type scale and button utilities from the cruip "Simple" template.
+   Copied rather than approximated: every step carries its own letter-spacing
+   (-0.037em on headings, -0.017em on body), and that tightness is most of
+   what makes the original look drawn rather than defaulted.
+   ───────────────────────────────────────────────────────────────────────── */
+@theme {
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.5715;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5;
+  --text-base--letter-spacing: -0.017em;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.5;
+  --text-lg--letter-spacing: -0.017em;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.5;
+  --text-xl--letter-spacing: -0.017em;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.415;
+  --text-2xl--letter-spacing: -0.037em;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 1.3333;
+  --text-3xl--letter-spacing: -0.037em;
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: 1.2777;
+  --text-4xl--letter-spacing: -0.037em;
+  --text-5xl: 3rem;
+  --text-5xl--line-height: 1;
+  --text-5xl--letter-spacing: -0.037em;
+  --text-6xl: 4rem;
+  --text-6xl--line-height: 1;
+  --text-6xl--letter-spacing: -0.037em;
+}
+
+@layer components {
+  .btn,
+  .btn-sm {
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-all;
+  }
+  .btn {
+    @apply px-4 py-[11px] shadow-lg;
+  }
+  .btn-sm {
+    @apply px-3 py-[5px] shadow-sm;
+  }
+}
+
+
+html {
+  scrollbar-gutter: stable;
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0px !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+/* The template's pill border: a hairline gradient ring drawn with a masked pseudo-element.
+ *
+ * Written as real CSS rather than Tailwind's `before:[mask-composite:exclude_!important]`.
+ * That utility generates the declaration, but the `mask` shorthand that follows resets
+ * mask-composite back to `add` — and the ring then fills the whole pill instead of tracing its
+ * edge, hiding everything inside it. Ordering the declarations here makes that impossible. */
+.pill-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid transparent;
+  background: linear-gradient(var(--color-gray-100), var(--color-gray-200)) border-box;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) padding-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) padding-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* The spinning ring on the Skyhook node, same reasoning as .pill-border: the `mask` shorthand
+ * resets mask-composite, so `exclude` has to be declared after it rather than inside a Tailwind
+ * arbitrary property. Left as a utility it renders a filled disc over the logo instead of a
+ * ring around it. */
+.ring-spin::before {
+  content: "";
+  position: absolute;
+  inset: -0.75rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background: conic-gradient(from 180deg, transparent, var(--color-blue-500)) border-box;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) padding-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) padding-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spin 3s linear infinite;
+  pointer-events: none;
+}
+
+/* The template defines these in its `@theme`; ours never carried them across, so every
+ * `animate-[breath_…]` and `animation: line …` on the page referred to a keyframe that did not
+ * exist and quietly did nothing. `breath` and `line` are the template's, unchanged. */
+@keyframes breath {
+  0%,
+  100% {
+    transform: scale(0.95);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes line {
+  0%,
+  100% {
+    left: 0;
+    opacity: 0;
+  }
+  50% {
+    left: 100%;
+    transform: translateX(-100%);
+  }
+  10%,
+  40%,
+  60%,
+  90% {
+    opacity: 0;
+  }
+  25%,
+  75% {
+    opacity: 1;
+  }
+}
+
+/* `line` travels out and back, which is right for decoration. The flow diagram is not
+ * decoration — it shows USDC moving one way — so the connectors use this instead: a single
+ * left-to-right pass occupying the first quarter of the cycle. Give the three connectors delays
+ * of 0, T/4 and T/2 and the highlight hands off from one to the next without a gap, arriving at
+ * the vault and stopping there. */
+@keyframes sweep {
+  0% {
+    left: -4rem;
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  19% {
+    opacity: 1;
+  }
+  25% {
+    left: 100%;
+    opacity: 0;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+/* The docs sidebar's social links.
+ *
+ * Fumadocs draws one bordered box around all of them, and that box stretches the sidebar's full
+ * width — 236px of frame around two 30px icons. There is no slot for it, so `:has()` reaches it
+ * through the marker class on the X icon, which is the only child of that box we author.
+ *
+ * The child combinator in `:has(> a > …)` is load-bearing. Written as `:has(.skyhook-social)`
+ * this matches every ancestor div in the sidebar, not the one wrapper, and strips the frame off
+ * all of them. */
+#nd-sidebar div:has(> a > .skyhook-social) {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  gap: 0.625rem;
+  justify-content: flex-end;
+}
+
+#nd-sidebar div:has(> a > .skyhook-social) > a {
+  border: 1px solid var(--color-fd-border);
+  background-color: color-mix(in oklab, var(--color-fd-secondary) 50%, transparent);
+  border-radius: var(--radius-lg);
+}

@@ -1,0 +1,4 @@
+{
+  "buildCommand": "npm run build --workspace @skyhook/web",
+  "installCommand": "npm install"
+}

@@ -11,3 +11,10 @@ export {
   isFinalized,
   HOOK_DATA_OFFSET,
 } from "./cctp-message.js";
+export {
+  heldAmount,
+  buildClaimTransaction,
+  feeBumpAndSubmit,
+  assertIsClaimOn,
+  explainClaimError,
+} from "./claim.js";

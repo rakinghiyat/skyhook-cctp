@@ -1,0 +1,38 @@
+{
+  "name": "@skyhook/web",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "predev": "node scripts/docs-from-readme.mjs",
+    "dev": "next dev",
+    "prebuild": "node scripts/docs-from-readme.mjs",
+    "build": "next build",
+    "start": "next start",
+    "types:check": "next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "@skyhook/sdk": "*",
+    "@stellar/freighter-api": "^6.0.1",
+    "@stellar/stellar-sdk": "^17.0.1",
+    "aos": "^3.0.0-beta.6",
+    "cn": "^0.3.0",
+    "fumadocs-core": "16.15.15",
+    "fumadocs-mdx": "15.4.5",
+    "fumadocs-ui": "npm:@fumadocs/base-ui@16.15.15",
+    "lucide-react": "^1.47.0",
+    "next": "16.3.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/aos": "^3.0.8",
+    "@types/mdx": "^2.0.14",
+    "@types/node": "^26.6.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2"
+  }
+}

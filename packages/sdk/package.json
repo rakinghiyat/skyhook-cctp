@@ -8,7 +8,7 @@
     ".": "./src/index.js"
   },
   "scripts": {
-    "test": "node --test test/",
+    "test": "node --test",
     "gate:gen-key": "node scripts/generate-arc-key.js",
     "gate:burn": "node scripts/gate-burn.js"
   },

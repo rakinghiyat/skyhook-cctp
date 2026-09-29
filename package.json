@@ -2,6 +2,7 @@
   "name": "skyhook",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "web"
   ]
 }

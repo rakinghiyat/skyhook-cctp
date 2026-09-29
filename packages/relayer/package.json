@@ -7,7 +7,7 @@
     "relay": "src/cli.js"
   },
   "scripts": {
-    "test": "node --test test/",
+    "test": "node --test",
     "relay": "node src/cli.js"
   },
   "dependencies": {
