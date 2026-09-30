@@ -1,5 +1,5 @@
 import { setTimeout as sleep } from "node:timers/promises";
-import { parseCctpMessage, isFinalized } from "@skyhook/sdk";
+import { parseCctpMessage, isFinalized } from "@skyhook-cctp/sdk";
 import { fetchJson } from "./http.js";
 import { backoffSchedule } from "./backoff.js";
 

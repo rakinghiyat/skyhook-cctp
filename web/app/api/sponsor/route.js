@@ -11,7 +11,7 @@
 // holds a single Testnet key. Someone determined could drain it — but only by making genuine CCTP
 // transfers to themselves first, which costs them more than it costs us, and friendbot refills
 // it. That trade is acceptable on Testnet and would not be on mainnet.
-import { feeBumpAndSubmit } from "@skyhook/sdk";
+import { feeBumpAndSubmit } from "@skyhook-cctp/sdk";
 
 export async function POST(request) {
   const rpcUrl = process.env.STELLAR_RPC_URL ?? "https://soroban-testnet.stellar.org";

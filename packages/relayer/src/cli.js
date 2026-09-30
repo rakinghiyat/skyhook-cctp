@@ -9,7 +9,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { isFinalized } from "@skyhook/sdk";
+import { isFinalized } from "@skyhook-cctp/sdk";
 import { awaitAttestation, requestReattestation, reportRawHexParse } from "./relay.js";
 import { submitExecute } from "./submit.js";
 

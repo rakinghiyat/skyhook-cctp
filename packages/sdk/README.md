@@ -1,4 +1,4 @@
-# @skyhook/sdk
+# @skyhook-cctp/sdk
 
 Builds the CCTP burn parameters and the Skyhook instruction that travels with them — and reads
 the same wire format back.
@@ -10,7 +10,7 @@ the bytes this produces.
 ## Install
 
 ```bash
-npm install @skyhook/sdk
+npm install @skyhook-cctp/sdk
 ```
 
 ## The shortest path
@@ -20,7 +20,7 @@ A transfer that deposits into a SEP-56 vault on arrival, in three steps.
 ### 1. Build the instruction
 
 ```js
-import { buildInstruction, depositParams, buildHookData, toHex } from "@skyhook/sdk";
+import { buildInstruction, depositParams, buildHookData, toHex } from "@skyhook-cctp/sdk";
 
 const SKYHOOK_CORE = "CCOMST7FEDLYJ5MXZTVKVKMK43AQP2U2AZEZRHE3XHYO6UF6LKC2654F";
 const VAULT        = "CAY6UNOOWATJW2LXFGMTO6NKLJRVWRKMNVZVPGLKRBLE5Y6OFMDF7IB4";
@@ -51,7 +51,7 @@ makes funds **permanently stuck and unrecoverable**. `buildBurnParameters` assem
 refuses both, before anything is signed:
 
 ```js
-import { buildBurnParameters } from "@skyhook/sdk";
+import { buildBurnParameters } from "@skyhook-cctp/sdk";
 
 const burn = buildBurnParameters({
   amount: 1_000_000n,   // 6 decimals, as USDC is on the source chain
@@ -138,7 +138,7 @@ the API cannot tell a 32-byte account from a 32-byte contract. The values are in
 the whole time:
 
 ```js
-import { parseCctpMessage, isFinalized } from "@skyhook/sdk";
+import { parseCctpMessage, isFinalized } from "@skyhook-cctp/sdk";
 
 const parsed = parseCctpMessage(message);   // raw hex from Circle's `message` field
 
@@ -187,7 +187,7 @@ Testnet only for now. The addresses above are Stellar Testnet, paired with Arc T
 
 ```bash
 npm install          # from the repo root — workspaces wire the packages together
-npm test --workspace @skyhook/sdk
+npm test --workspace @skyhook-cctp/sdk
 ```
 
 Tests run against real attested messages captured from Testnet, so the parser is checked against

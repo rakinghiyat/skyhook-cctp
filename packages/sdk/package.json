@@ -1,5 +1,5 @@
 {
-  "name": "@skyhook/sdk",
+  "name": "@skyhook-cctp/sdk",
   "version": "0.1.0",
   "description": "Build CCTP burn parameters and Skyhook instruction payloads for Stellar, with the two address misconfigurations Circle calls unrecoverable refused before signing.",
   "license": "Apache-2.0",

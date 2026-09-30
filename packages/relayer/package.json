@@ -11,7 +11,7 @@
     "relay": "node src/cli.js"
   },
   "dependencies": {
-    "@skyhook/sdk": "*",
+    "@skyhook-cctp/sdk": "*",
     "@stellar/stellar-sdk": "^17.0.1"
   }
 }
