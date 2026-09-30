@@ -47,34 +47,49 @@ const instruction = buildInstruction(RECIPIENT, 2);
 
 Two parameters decide whether the transfer arrives or is lost forever. Circle warns that a wrong
 `destinationCaller`, or a `mintRecipient` pointing at anything other than the forwarder contract,
-makes funds **permanently stuck and unrecoverable**.
-
-Both must be `CctpForwarder`, as `bytes32`:
+makes funds **permanently stuck and unrecoverable**. `buildBurnParameters` assembles the call and
+refuses both, before anything is signed:
 
 ```js
-import { StrKey } from "@stellar/stellar-sdk";
+import { buildBurnParameters } from "@skyhook/sdk";
 
-const CCTP_FORWARDER = "CA66Q2WFBND6V4UEB7RD4SAXSVIWMD6RA4X3U32ELVFGXV5PJK4T4VSZ";
-const forwarder = toHex(StrKey.decodeContract(CCTP_FORWARDER));
+const burn = buildBurnParameters({
+  amount: 1_000_000n,   // 6 decimals, as USDC is on the source chain
+  forwarder: "CA66Q2WFBND6V4UEB7RD4SAXSVIWMD6RA4X3U32ELVFGXV5PJK4T4VSZ",
+  forwardRecipient: SKYHOOK_CORE,   // where the instruction is executed
+  burnToken: USDC,                  // USDC's address on the source chain
+  instruction,                      // from step 1
+});
 
 await walletClient.writeContract({
-  address: TOKEN_MESSENGER,           // Circle's TokenMessengerV2 on the source chain
+  address: TOKEN_MESSENGER,         // Circle's TokenMessengerV2 on the source chain
   abi: tokenMessengerAbi,
   functionName: "depositForBurnWithHook",
-  args: [
-    1_000_000n,       // amount, 6 decimals
-    27,               // destinationDomain — Stellar
-    forwarder,        // mintRecipient     — the forwarder, never a user address
-    USDC,             // burnToken
-    forwarder,        // destinationCaller — the forwarder again
-    500n,             // maxFee
-    1000,             // minFinalityThreshold (1000 = fast)
-    hookData,         // from step 1
-  ],
+  args: burn.args,                  // already in the ABI's order
 });
 ```
 
-Skyhook's own address goes in `forwardRecipient` inside the hook data, never in `mintRecipient`.
+`mintRecipient` and `destinationCaller` both default to `forwarder`, which is the only correct
+value for either — you do not pass them. They are still *accepted*, so that a wrong one is caught
+rather than impossible to express, and the error names the mistake:
+
+```
+mintRecipient is Skyhook's own address. It belongs in forwardRecipient, inside the hook
+data — the mint always goes to CctpForwarder (CA66Q2WF…), which then forwards.
+```
+
+That is the mistake worth guarding against, because it is the reasonable one: naming the contract
+that should act on the funds, on the assumption that this is how you route them there. It is not.
+Skyhook's address goes in `forwardRecipient` inside the hook data; the mint always goes to the
+forwarder.
+
+Why this is checked here rather than handled later: once the burn is signed, its nonce is spent. A
+message that cannot be delivered cannot be retried, refunded or rebuilt, so before signing is the
+only moment any of this can be caught.
+
+Prefer to build the call yourself? `burn` also carries each parameter by name — `amount`,
+`destinationDomain`, `mintRecipient`, `burnToken`, `destinationCaller`, `maxFee`,
+`minFinalityThreshold`, `hookData` — with the addresses already `bytes32`-encoded.
 
 ### 3. Relay it
 
@@ -141,6 +156,7 @@ isFinalized(parsed);              // false means it may need re-attestation
 |---|---|
 | `buildInstruction(recipient, handlerId, params?)` | The Skyhook instruction envelope |
 | `depositParams(vault)` | Deposit's `params` — the vault address |
+| `buildBurnParameters({ … })` | The `depositForBurnWithHook` call, with the unrecoverable addresses refused |
 | `buildHookData(forwardRecipient, payload?)` | Circle's hook frame around an instruction |
 | `parseCctpMessage(hex)` | A raw CCTP message, fields and all |
 | `parseHookData(bytes)` | Just the hook frame |

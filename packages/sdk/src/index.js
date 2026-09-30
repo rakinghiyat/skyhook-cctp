@@ -5,6 +5,7 @@
 // half a library, and the relayer needs the reading half.
 export { buildHookData, toHex } from "./hook-data.js";
 export { buildInstruction, depositParams } from "./instruction.js";
+export { buildBurnParameters, STELLAR_DOMAIN } from "./burn.js";
 export {
   parseCctpMessage,
   parseHookData,
