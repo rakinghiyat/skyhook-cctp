@@ -2,12 +2,11 @@
 // instruction attached, so the core parses it, tries to route it, and falls back.
 import { createWalletClient, createPublicClient, http, parseAbi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { StrKey } from "@stellar/stellar-sdk";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { loadEnv, repoRoot } from "./env.js";
-import { buildHookData, toHex } from "../src/hook-data.js";
 import { buildInstruction, depositParams } from "../src/instruction.js";
+import { buildBurnParameters } from "../src/burn.js";
 
 const env = loadEnv();
 
@@ -32,7 +31,6 @@ async function main() {
   const amount = BigInt(Math.round(Number(process.env.AMOUNT ?? 1) * 1_000_000));
   const handlerId = Number(process.argv[2] ?? 1);
 
-  const forwarderBytes32 = toHex(StrKey.decodeContract(env.CCTP_FORWARDER_ID));
   // Defaults to the Freighter demo account — a recipient that cannot yet receive USDC, which
   // is the case Hold exists for. Override with RECIPIENT=G... to aim somewhere else.
   const recipient = process.env.RECIPIENT || env.FREIGHTER_RECIPIENT || env.RELAYER_PUBLIC_KEY;
@@ -45,7 +43,17 @@ async function main() {
       : new Uint8Array(0);
 
   const instruction = buildInstruction(recipient, handlerId, params);
-  const hookData = toHex(buildHookData(env.SKYHOOK_CORE_ID, instruction));
+
+  // The library assembles the burn and refuses the addresses Circle calls unrecoverable, so this
+  // script no longer decides any of it — which is the point: what a sender runs is the same code
+  // path the package ships.
+  const burn = buildBurnParameters({
+    amount,
+    forwarder: env.CCTP_FORWARDER_ID,
+    forwardRecipient: env.SKYHOOK_CORE_ID,
+    burnToken: env.ARC_USDC,
+    instruction,
+  });
 
   console.log("core:            ", env.SKYHOOK_CORE_ID);
   console.log("handler_id:      ", handlerId);
@@ -65,16 +73,7 @@ async function main() {
     address: env.ARC_TOKEN_MESSENGER,
     abi: tokenMessengerAbi,
     functionName: "depositForBurnWithHook",
-    args: [
-      amount,
-      27, // Stellar
-      forwarderBytes32,
-      env.ARC_USDC,
-      forwarderBytes32,
-      500n,
-      1000,
-      hookData,
-    ],
+    args: burn.args,
   });
   console.log("burn tx:", burnTx);
   const receipt = await publicClient.waitForTransactionReceipt({ hash: burnTx });

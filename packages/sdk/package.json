@@ -1,11 +1,39 @@
 {
   "name": "@skyhook/sdk",
-  "private": true,
+  "version": "0.1.0",
+  "description": "Build CCTP burn parameters and Skyhook instruction payloads for Stellar, with the two address misconfigurations Circle calls unrecoverable refused before signing.",
+  "license": "Apache-2.0",
   "type": "module",
-  "version": "0.0.1",
   "main": "src/index.js",
   "exports": {
     ".": "./src/index.js"
+  },
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rakinghiyat/skyhook-cctp.git",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://skyhook-cctp.vercel.app",
+  "bugs": {
+    "url": "https://github.com/rakinghiyat/skyhook-cctp/issues"
+  },
+  "keywords": [
+    "stellar",
+    "soroban",
+    "cctp",
+    "circle",
+    "usdc",
+    "cross-chain",
+    "hooks"
+  ],
+  "engines": {
+    "node": ">=22"
   },
   "scripts": {
     "test": "node --test",
@@ -13,7 +41,9 @@
     "gate:burn": "node scripts/gate-burn.js"
   },
   "dependencies": {
-    "@stellar/stellar-sdk": "^17.0.1",
+    "@stellar/stellar-sdk": "^17.0.1"
+  },
+  "devDependencies": {
     "viem": "^2.21.0"
   }
 }
