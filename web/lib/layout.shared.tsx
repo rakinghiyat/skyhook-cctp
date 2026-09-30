@@ -5,7 +5,8 @@ import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
  *
  * The landing and claim pages use the template's own header (`components/ui/header`); the docs
  * keep Fumadocs' sidebar layout, which expects this shape and brings the search dialog with it.
- * Both halves draw the same wordmark, so the site still reads as one.
+ * The docs carry their own wordmark, the lockup plus DOCS, so a reader always knows which
+ * half of the site they are in.
  *
  * `themeSwitch.enabled: false` is deliberate and works with `sidebar.footer` in
  * `app/docs/layout.tsx`. Fumadocs puts the icon links and the theme switch inside one bordered
@@ -19,9 +20,10 @@ export function baseOptions(): BaseLayoutProps {
       title: (
         <span className="inline-flex items-center">
           {/* Two files rather than one inverted: `invert` on a black wordmark gives white, but it
-              also flips every other pixel, and these carry a blue hook. */}
-          <img src="/wordmark-black.png" alt="Skyhook" className="h-7 w-auto dark:hidden" />
-          <img src="/wordmark-white.png" alt="Skyhook" className="hidden h-7 w-auto dark:block" />
+              flips every other pixel too. Both ship with two thirds of their height as empty
+              canvas, so each is cropped to its bounding box or `h-7` shrinks the mark to nothing. */}
+          <img src="/docs-wordmark-black.png" alt="Skyhook Docs" className="h-7 w-auto dark:hidden" />
+          <img src="/docs-wordmark-white.png" alt="Skyhook Docs" className="hidden h-7 w-auto dark:block" />
         </span>
       ),
     },
