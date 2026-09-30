@@ -10,7 +10,7 @@
 // XLM balance either side of the claim, because the promise is about what they did *not* spend,
 // and that is worth demonstrating rather than asserting.
 import { useState } from "react";
-import { buildClaimTransaction, heldAmount, explainClaimError } from "@skyhook/sdk";
+import { buildClaimTransaction, heldAmount, explainClaimError } from "@skyhook-cctp/sdk";
 import { CONFIG, formatUsdc } from "@/lib/skyhook";
 import { connect, sign, INSTALL_URL } from "@/lib/freighter";
 
