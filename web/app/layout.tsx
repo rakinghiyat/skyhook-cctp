@@ -8,7 +8,21 @@ import type { Metadata } from 'next';
 // double-storey `a`, single-storey `g`, tall x-height.
 const figtree = Figtree({ subsets: ['latin'], display: 'swap' });
 
+// Where the Open Graph images resolve from. Without this Next falls back to localhost, and every
+// social preview of this site would point at a machine nobody else can reach — which matters,
+// because the demo video is published on X and the link travels with it.
+//
+// `VERCEL_PROJECT_PRODUCTION_URL` is set by the platform and always names the production domain,
+// even in a preview build, so previews advertise the real images rather than their own throwaway
+// URL. `NEXT_PUBLIC_SITE_URL` overrides it for any other host.
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : 'http://localhost:3000');
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: { default: 'Skyhook', template: '%s — Skyhook' },
   description:
     'The execution layer for CCTP hooks on Stellar, so USDC does something the moment it lands.',

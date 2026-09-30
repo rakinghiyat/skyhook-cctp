@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import { Fragment } from 'react';
 
 // The flow: a wallet on some EVM chain, Circle's CCTP, Skyhook, a vault.
 //
@@ -12,6 +12,13 @@ import Image from 'next/image';
 // the discs, so a disc never sits above its own column. Here each node is one cell holding disc
 // and words together, and the connector is absolutely positioned across the gap between cells —
 // so the alignment is structural rather than something to be tuned.
+//
+// **Plain `<img>`, not `next/image`.** Three of these four marks are SVG, and Next's optimizer
+// refuses SVG outright — `/_next/image` answers `INVALID_IMAGE_OPTIMIZE_REQUEST`, so they render
+// as nothing. `next dev` serves them directly and never hits that path, so this only appeared
+// once the site was deployed. The flag that would allow it is called `dangerouslyAllowSVG`, and
+// there is nothing to gain by setting it: an SVG is already vector, so resampling it to 48px
+// saves nothing. The lockup, wordmark and stripes are plain `<img>` for the same reason.
 //
 // The connector reaches from `50% + 4.25rem` to `-50% + 4.25rem`: half a cell plus clearance, out
 // to the same point measured back from the next cell's centre. 4.25rem because the Skyhook node's
@@ -59,13 +66,11 @@ function Disc({ node }: { node: Node }) {
     <div className="animate-[breath_8s_ease-in-out_infinite_both]">
       <div className="flex size-20 items-center justify-center gap-1.5 rounded-full bg-white shadow-lg shadow-black/[0.03] before:absolute before:inset-0 before:m-[8.334%] before:rounded-[inherit] before:border before:border-gray-700/5 before:bg-gray-200/60 before:[mask-image:linear-gradient(to_bottom,black,transparent)] md:size-24">
         {node.logos.map((l) => (
-          <Image
+          <img
             key={l.src}
             className={`relative ${l.className ?? 'size-7 md:size-8'}`}
             src={l.src}
             alt={l.alt}
-            width={40}
-            height={40}
           />
         ))}
       </div>
@@ -80,7 +85,7 @@ function Disc({ node }: { node: Node }) {
   );
 }
 
-/** The connector: a hairline with one highlight sweeping left to right, and an arrowhead. */
+/** The connector, wide layout: a hairline with one highlight sweeping left to right. */
 function Connector({ delay }: { delay: string }) {
   return (
     <div
@@ -94,7 +99,7 @@ function Connector({ delay }: { delay: string }) {
         <div className="absolute inset-0 bg-gray-200" />
         <div
           className="absolute inset-y-0 w-16 bg-linear-to-r from-transparent via-blue-500 to-transparent"
-          style={{ animation: `sweep 4s linear ${delay} infinite both` }}
+          style={{ animation: `sweep 2.8s linear ${delay} infinite both` }}
         />
       </div>
       <svg
@@ -105,6 +110,49 @@ function Connector({ delay }: { delay: string }) {
       >
         <path d="M0 0l7 3.5L0 7z" />
       </svg>
+    </div>
+  );
+}
+
+/**
+ * The rail, phone layout: **one** line for the whole flow, behind every disc.
+ *
+ * It was one rail per row before, each with its own animation and a delay to hand the light on.
+ * That cannot be made smooth. The rows are as tall as their text and the texts differ, so equal
+ * durations over unequal distances meant the light changed speed at every junction — and the
+ * opacity steps dimmed it at one rail's end before lighting it at the next's, so the two fades
+ * ran in sequence and left a dark gap. What looked like a break was a break.
+ *
+ * Grid row placement removes the junctions rather than tuning them: the rail is one element in
+ * column 1 spanning every row, so the highlight makes a single uninterrupted pass at a constant
+ * speed. Nothing to hand off, nothing to synchronise.
+ */
+function Rail({ rows }: { rows: number }) {
+  // Where the first and last disc sit, as a fraction of the whole grid. Exact only because the
+  // grid is `grid-auto-rows: 1fr`, which makes every row the height of the tallest — so disc n's
+  // centre is always at (2n+1)/2rows, whatever the text does. A hard stop rather than a fade:
+  // the cut lands dead centre of a disc, and the disc's own white fill hides it.
+  const stop = `${100 / (2 * rows)}%`;
+  const mask =
+    `linear-gradient(to bottom, transparent ${stop}, #000 ${stop}, ` +
+    `#000 calc(100% - ${stop}), transparent calc(100% - ${stop}))`;
+
+  return (
+    <div
+      className="relative col-start-1 w-px justify-self-center overflow-hidden"
+      style={{
+        gridRowStart: 1,
+        gridRowEnd: rows + 1,
+        WebkitMaskImage: mask,
+        maskImage: mask,
+      }}
+      aria-hidden="true"
+    >
+      <div className="absolute inset-0 bg-gray-200" />
+      <div
+        className="absolute inset-x-0 h-16 bg-linear-to-b from-transparent via-blue-500 to-transparent"
+        style={{ animation: 'rail-sweep 2.8s linear infinite both' }}
+      />
     </div>
   );
 }
@@ -135,15 +183,52 @@ export default function Steps() {
             </p>
           </div>
 
+          {/* Phone: the flow runs top to bottom, discs in a column on the left and the words
+              beside them, so the arrows survive instead of the four nodes stacking into a list
+              with nothing joining them.
+
+              One grid rather than a grid of grids — the rail has to span every row, and grid
+              row placement is what lets a single element do that. The rows carry no `gap-y`;
+              the spacing lives in the text's `py`, or the rail would show through the gaps. */}
           <div
-            className="mx-auto grid max-w-4xl gap-y-12 sm:grid-cols-2 md:grid-cols-4 md:gap-y-0"
+            className="grid grid-cols-[auto_1fr] gap-x-5 [grid-auto-rows:1fr] md:hidden"
+            data-aos="zoom-y-out"
+            data-aos-delay={300}
+          >
+            <Rail rows={NODES.length} />
+            {NODES.map((node, i) => (
+              <Fragment key={node.key}>
+                {/* `items-center` puts the disc level with the middle of its own text. */}
+                <div
+                  className="relative col-start-1 flex w-20 items-center justify-center"
+                  style={{ gridRow: i + 1 }}
+                >
+                  <Disc node={node} />
+                </div>
+                <div className="col-start-2 flex flex-col justify-center py-5" style={{ gridRow: i + 1 }}>
+                  <h3
+                    className={`mb-1.5 text-sm font-medium ${
+                      node.ours ? 'text-blue-600' : 'text-gray-900'
+                    }`}
+                  >
+                    {node.title}
+                  </h3>
+                  <p className="text-[15px] text-gray-600">{node.body}</p>
+                </div>
+              </Fragment>
+            ))}
+          </div>
+
+          {/* Tablet and up: the original row. */}
+          <div
+            className="mx-auto hidden max-w-4xl md:grid md:grid-cols-4"
             data-aos="zoom-y-out"
             data-aos-delay={300}
           >
             {NODES.map((node, i) => (
               <div key={node.key} className="relative flex flex-col items-center px-2">
                 <Disc node={node} />
-                {i < NODES.length - 1 && <Connector delay={`${i}s`} />}
+                {i < NODES.length - 1 && <Connector delay={`${i * 0.7}s`} />}
                 <h3
                   className={`mb-1.5 mt-7 text-center text-sm font-medium ${
                     node.ours ? 'text-blue-600' : 'text-gray-900'

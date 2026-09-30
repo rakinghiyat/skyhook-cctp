@@ -11,10 +11,10 @@ export default function Header() {
     <header className="fixed top-2 z-30 w-full md:top-6">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="pill-border relative flex h-14 items-center justify-between gap-3 rounded-2xl bg-white/90 px-3 shadow-lg shadow-black/[0.03] backdrop-blur-xs">
-          <div className="flex items-center gap-10">
+          <div className="flex items-center gap-5 md:gap-10">
             <Logo />
             <nav>
-              <ul className="flex items-center gap-7 text-base font-medium">
+              <ul className="flex items-center gap-5 text-base font-medium md:gap-7">
                 <li>
                   <Link href="/docs" className="text-gray-500 transition hover:text-gray-900">
                     Docs

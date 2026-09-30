@@ -93,11 +93,11 @@ export default function Guarantees() {
             Minted funds are never lost, and never cause the transfer to revert
           </h2>
 
-          <div className="grid gap-x-10 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-x-5 gap-y-10 sm:gap-x-10 sm:gap-y-14 lg:grid-cols-3">
             {FEATURES.map((f, i) => (
               <article key={f.title} data-aos="zoom-y-out" data-aos-delay={100 + (i % 3) * 100}>
                 <svg
-                  className="mb-5 stroke-gray-900"
+                  className="mb-3 size-6 stroke-gray-900 sm:mb-5 sm:size-7"
                   xmlns="http://www.w3.org/2000/svg"
                   width={30}
                   height={30}
@@ -110,8 +110,8 @@ export default function Guarantees() {
                 >
                   {f.icon}
                 </svg>
-                <h3 className="mb-3 text-[17px] font-bold text-gray-900">{f.title}</h3>
-                <p className="text-[17px] leading-relaxed text-gray-600">{f.body}</p>
+                <h3 className="mb-2 text-[15px] font-bold text-gray-900 sm:mb-3 sm:text-[17px]">{f.title}</h3>
+                <p className="text-[13px] leading-relaxed text-gray-600 sm:text-[17px]">{f.body}</p>
               </article>
             ))}
           </div>

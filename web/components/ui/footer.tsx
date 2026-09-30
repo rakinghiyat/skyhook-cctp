@@ -12,21 +12,20 @@ export default function Footer({ border = false }: { border?: boolean }) {
     <footer className="relative bg-white">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div
-          className={`grid gap-10 py-8 sm:grid-cols-12 md:py-12 ${
+          className={`grid grid-cols-2 gap-x-6 gap-y-8 py-8 sm:grid-cols-12 sm:gap-10 md:py-12 ${
             border
               ? 'border-t [border-image:linear-gradient(to_right,transparent,var(--color-slate-200),transparent)1]'
               : ''
           }`}
         >
           {/* 1st block */}
-          <div className="space-y-2 sm:col-span-12 lg:col-span-4">
+          <div className="col-span-2 space-y-2 sm:col-span-12 lg:col-span-4">
             <div>
               <FooterLogo />
             </div>
             <div className="text-sm text-gray-600">
               The execution layer for CCTP hooks on Stellar.
             </div>
-            <div className="text-sm text-gray-500">Stellar Testnet only, and not audited.</div>
           </div>
 
           {/* 2nd block */}

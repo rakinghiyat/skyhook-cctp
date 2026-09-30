@@ -202,3 +202,22 @@ html > body[data-scroll-locked] {
   background-color: color-mix(in oklab, var(--color-fd-secondary) 50%, transparent);
   border-radius: var(--radius-lg);
 }
+
+/* The vertical rail's highlight. One pass down the whole column, then a pause.
+ *
+ * Unlike `sweep` this carries no opacity steps. It does not need them: the rail clips, and the
+ * travelling block fades to transparent at both its own ends, so it simply slides out of view.
+ * The opacity steps were what made the phone version look broken — each rail dimmed at its
+ * bottom before the next lit at its top, and the two fades ran one after the other rather than
+ * overlapping, leaving a dark gap at every junction. */
+@keyframes rail-sweep {
+  0% {
+    top: -4rem;
+  }
+  70% {
+    top: 100%;
+  }
+  100% {
+    top: 100%;
+  }
+}
