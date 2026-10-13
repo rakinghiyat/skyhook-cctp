@@ -4,6 +4,7 @@ import FooterLogo from './footer-logo';
 // The template's footer, on its twelve-column grid with the gradient hairline above it.
 // Columns named for what a reader is looking for, not for how the repository is arranged.
 const REPO = 'https://github.com/rakinghiyat/skyhook-cctp';
+const DEMO = 'https://youtu.be/p1HCBR21vbo';
 
 export default function Footer({ border = false }: { border?: boolean }) {
   return (
@@ -65,6 +66,16 @@ export default function Footer({ border = false }: { border?: boolean }) {
             <div className="space-y-2">
               <h3 className="text-sm font-medium">Project</h3>
               <ul className="space-y-2 text-sm">
+                <li>
+                  <a
+                    className="text-gray-600 transition hover:text-gray-900"
+                    href={DEMO}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Demo video
+                  </a>
+                </li>
                 <li>
                   <a
                     className="text-gray-600 transition hover:text-gray-900"
