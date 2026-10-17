@@ -80,7 +80,7 @@ export default function MobileMenu({ repo }: { repo: string }) {
             GitHub
           </a>
           <a
-            href="https://x.com/skyhookprotocol"
+            href="https://x.com/skyhookcctp"
             target="_blank"
             rel="noreferrer"
             onClick={() => setOpen(false)}

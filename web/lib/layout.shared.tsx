@@ -33,7 +33,7 @@ export function baseOptions(): BaseLayoutProps {
         type: 'icon',
         text: 'X',
         label: 'Skyhook on X',
-        url: 'https://x.com/skyhookprotocol',
+        url: 'https://x.com/skyhookcctp',
         external: true,
         // The viewBox is cropped to the glyph: the path is drawn in a 32 box but only occupies
         // 8–24 of it, so at `0 0 32 32` it renders visibly smaller than the GitHub mark beside it.

@@ -41,7 +41,7 @@ export default function Header() {
               against each other. */}
           <div className="hidden items-center md:flex">
             <a
-              href="https://x.com/skyhookprotocol"
+              href="https://x.com/skyhookcctp"
               target="_blank"
               rel="noreferrer"
               aria-label="Skyhook on X"
