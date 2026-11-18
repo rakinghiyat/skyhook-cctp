@@ -29,3 +29,7 @@ Thumbs.db
 
 # Scratch output from scripts (burn results, attestations). Can be regenerated.
 packages/*/scripts/.*.json
+# The liveness canary. Spends 1 USDC on Arc Testnet per run and is driven by a
+# launchd agent on one machine, so it stays local rather than shipping to anyone
+# who clones this.
+packages/sdk/scripts/canary.js
