@@ -196,9 +196,9 @@ stellar contract build
 security review; a review is planned before any mainnet deployment. Do not deploy this to mainnet
 as it stands.
 
-`claim()` inside a fee-bumped envelope — letting a recipient sign without spending XLM — is
-implemented at the contract level but not yet demonstrated end to end. The Freighter claim page
-is where that gets built.
+`claim()` inside a fee-bumped envelope — letting a recipient sign without spending XLM — runs
+end to end at [skyhookcctp.com/claim](https://www.skyhookcctp.com/claim): the recipient signs in
+[Varial](https://varialwallet.com/) (formerly Freighter), and a Testnet sponsor pays the fee.
 
 ## License
 

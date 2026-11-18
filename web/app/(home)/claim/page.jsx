@@ -2,7 +2,7 @@
 // The claim page.
 //
 // SOW D3: "a Freighter-connected page where a recipient claims held funds and signs without
-// holding XLM."
+// holding XLM." Freighter has since been renamed Varial — the same wallet, so the same page.
 //
 // The recipient signs; a sponsor pays. Two signatures from two different places, and the split is
 // what makes the arrangement safe — the sponsor's envelope cannot alter the transaction it wraps,
@@ -12,7 +12,7 @@
 import { useState } from "react";
 import { buildClaimTransaction, heldAmount, explainClaimError } from "@skyhook-cctp/sdk";
 import { CONFIG, formatUsdc } from "@/lib/skyhook";
-import { connect, sign, INSTALL_URL } from "@/lib/freighter";
+import { connect, sign, INSTALL_URL } from "@/lib/varial";
 
 async function xlmBalance(address) {
   try {
@@ -70,7 +70,7 @@ export default function ClaimPage() {
         networkPassphrase: CONFIG.networkPassphrase,
       });
 
-      setStatus("Waiting for you to sign in Freighter…");
+      setStatus("Waiting for you to sign in Varial…");
       const signedXdr = await sign(xdr, {
         networkPassphrase: CONFIG.networkPassphrase,
         networkName: CONFIG.network,
@@ -118,7 +118,7 @@ export default function ClaimPage() {
           disabled={busy}
           className="mt-7 rounded-lg bg-linear-to-t from-blue-600 to-blue-500 px-5 py-3 font-medium text-white transition hover:opacity-90 disabled:opacity-50"
         >
-          {busy ? "Connecting…" : "Connect Freighter"}
+          {busy ? "Connecting…" : "Connect Varial"}
         </button>
       )}
 
@@ -165,13 +165,13 @@ export default function ClaimPage() {
           {/not installed/i.test(error) && (
             <p className="mt-3">
               <a href={INSTALL_URL} target="_blank" rel="noreferrer" className="underline">
-                Install Freighter →
+                Install Varial →
               </a>
             </p>
           )}
           {/trustline/i.test(error) && (
             <p className="mt-3 text-sm text-gray-600">
-              A Stellar account has to opt in to each asset it holds. Add USDC in Freighter, then
+              A Stellar account has to opt in to each asset it holds. Add USDC in Varial, then
               claim again — the held balance stays exactly where it is until you do.
             </p>
           )}
