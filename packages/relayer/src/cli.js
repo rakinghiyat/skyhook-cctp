@@ -6,17 +6,32 @@
 //
 // Without a relayer the instruction never runs. The forwarder only credits the recipient, it
 // doesn't call it.
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { isFinalized } from "@skyhook-cctp/sdk";
 import { awaitAttestation, requestReattestation, reportRawHexParse } from "./relay.js";
 import { submitExecute } from "./submit.js";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+// Walk up from the working directory to find .env. Resolving it relative to this file works
+// only inside the repo: once installed, the same "../../.." from
+// node_modules/@skyhook-cctp/relayer/src lands on node_modules rather than on the project
+// using the relayer, and every run fails on a file that was never there.
+function findEnv() {
+  let dir = process.cwd();
+  for (;;) {
+    const candidate = path.join(dir, ".env");
+    if (existsSync(candidate)) return candidate;
+    const parent = path.dirname(dir);
+    if (parent === dir) throw new Error(`no .env found in ${process.cwd()} or any directory above it`);
+    dir = parent;
+  }
+}
+
+let envPath;
 
 function loadEnv() {
-  const text = readFileSync(path.join(repoRoot, ".env"), "utf8");
+  envPath = findEnv();
+  const text = readFileSync(envPath, "utf8");
   const env = {};
   for (const line of text.split("\n")) {
     const t = line.trim();
@@ -34,11 +49,12 @@ const log = (msg) => console.log(`[${stamp()}] ${msg}`);
 async function main() {
   const burnTxHash = process.argv[2];
   if (!burnTxHash) {
-    console.error("usage: relay <burnTxHash>");
+    console.error("usage: skyhook-relay <burnTxHash>");
     process.exit(1);
   }
 
   const env = loadEnv();
+  log(`config ${envPath}`);
   const api = env.CIRCLE_ATTESTATION_API;
 
   // Fail early with a clear message. Deep in the Stellar SDK an empty key just says

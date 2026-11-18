@@ -1,17 +1,46 @@
 {
-  "name": "@skyhook/relayer",
-  "private": true,
+  "name": "@skyhook-cctp/relayer",
+  "version": "0.1.1",
+  "description": "Take one CCTP burn all the way to Stellar: wait for Circle's attestation, re-attest if it never reached finality, and submit Skyhook.execute so the arriving USDC runs its instruction.",
+  "license": "Apache-2.0",
   "type": "module",
-  "version": "0.0.1",
+  "main": "src/relay.js",
   "bin": {
-    "relay": "src/cli.js"
+    "skyhook-relay": "src/cli.js"
+  },
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rakinghiyat/skyhook-cctp.git",
+    "directory": "packages/relayer"
+  },
+  "homepage": "https://www.skyhookcctp.com",
+  "bugs": {
+    "url": "https://github.com/rakinghiyat/skyhook-cctp/issues"
+  },
+  "keywords": [
+    "stellar",
+    "soroban",
+    "cctp",
+    "circle",
+    "usdc",
+    "cross-chain",
+    "relayer"
+  ],
+  "engines": {
+    "node": ">=22"
   },
   "scripts": {
     "test": "node --test",
     "relay": "node src/cli.js"
   },
   "dependencies": {
-    "@skyhook-cctp/sdk": "*",
+    "@skyhook-cctp/sdk": "^0.1.0",
     "@stellar/stellar-sdk": "^17.0.1"
   }
 }

@@ -1,4 +1,4 @@
-# @skyhook/relayer
+# @skyhook-cctp/relayer
 
 Takes one CCTP burn all the way to Stellar.
 
@@ -12,12 +12,18 @@ operator, so anyone can run this for any burn.
 
 ## Usage
 
-```
-npm install                       # from the repo root; workspaces wire the packages together
-node packages/relayer/src/cli.js <burnTxHash>
+```bash
+npx @skyhook-cctp/relayer <burnTxHash>
 ```
 
 `<burnTxHash>` is the transaction on the source chain that burned the USDC.
+
+From a clone of the repository instead:
+
+```bash
+npm install                       # from the repo root; workspaces wire the packages together
+node packages/relayer/src/cli.js <burnTxHash>
+```
 
 ## What it does
 
@@ -33,7 +39,9 @@ node packages/relayer/src/cli.js <burnTxHash>
 
 ## Configuration
 
-Read from the repo-root `.env`:
+Read from a `.env` file, which the relayer looks for in the directory you run it in and then
+in each directory above it. It prints the one it picked, so there is no guessing which file a
+value came from.
 
 | Variable | Purpose |
 |---|---|
@@ -41,7 +49,7 @@ Read from the repo-root `.env`:
 | `SOURCE_DOMAIN_ID` | CCTP domain of the source chain |
 | `STELLAR_RPC_URL` | Soroban RPC endpoint |
 | `SKYHOOK_CORE_ID` | The core contract to submit to |
-| `RELAYER_SECRET_KEY` | Pays the invocation fee. Fill it with `./scripts/fill-stellar-keys.sh` |
+| `RELAYER_SECRET_KEY` | Pays the invocation fee, from its own account. Any funded Stellar key; on Testnet [friendbot](https://friendbot.stellar.org) funds one in a second. In a clone of the repository, `./scripts/fill-stellar-keys.sh` fills it from the Stellar CLI keystore. |
 
 ## If attestation fetches fail TLS verification
 
