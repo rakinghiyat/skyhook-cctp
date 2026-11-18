@@ -7,17 +7,13 @@ use stellar_tokens::{
     vault::{FungibleVault, Vault},
 };
 
-// The reference SEP-56 vault used to demonstrate and test the Deposit handler.
+// The reference SEP-56 vault for testing and demoing the Deposit handler.
 //
-// Deliberately a thin wrapper over OpenZeppelin's audited `Vault` — the point of naming
-// OpenZeppelin is to use their implementation, not to reimplement it. Everything here is
-// wiring; the vault mechanics come from the library.
+// A thin wrapper over OpenZeppelin's audited `Vault`. All the vault logic comes from the
+// library; this file only wires it up. We deploy our own so the demo doesn't depend on someone
+// else's vault staying up.
 //
-// Self-deployed so Deliverable 2 depends on nothing external: a third-party vault that went
-// down or was redeployed mid-sprint would break the deliverable through no fault of ours.
-//
-// Note what this is *not*: the Deposit handler targets the SEP-56 interface, never this
-// contract. Any conforming vault works, and its address travels in the instruction.
+// The Deposit handler doesn't depend on this contract. Any SEP-56 vault works.
 
 #[contract]
 pub struct ReferenceVault;

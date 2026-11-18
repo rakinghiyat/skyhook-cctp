@@ -9,7 +9,7 @@
 const VERSION = 0x01;
 const STRKEY_LEN = 56;
 
-/// Deposit's params are just the vault address, as a 56-byte strkey (docs/SPEC.md §3).
+/// Deposit's params are just the vault address, as a 56-byte strkey.
 export function depositParams(vaultStrkey) {
   const bytes = new TextEncoder().encode(vaultStrkey);
   if (bytes.length !== STRKEY_LEN) {

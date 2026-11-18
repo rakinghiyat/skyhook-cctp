@@ -1,7 +1,6 @@
 // The deployed set, in the template's section frame.
 //
-// Addresses rather than logos: the thing a reader can check for themselves is that these resolve
-// on a public explorer, and that is worth more here than a wall of partner marks.
+// Addresses, not logos, so readers can check them on a public explorer.
 const CONTRACTS: [string, string][] = [
   ['skyhook-core', 'CCOMST7FEDLYJ5MXZTVKVKMK43AQP2U2AZEZRHE3XHYO6UF6LKC2654F'],
   ['handler-deposit', 'CBZOKXZKKORG4FI5URPJMX3XHBDU6E7EXPD4YY36R36PHVOMEKWXRVFY'],

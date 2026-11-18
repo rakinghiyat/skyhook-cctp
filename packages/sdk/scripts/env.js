@@ -1,4 +1,4 @@
-// Minimal .env loader — repo root, no dependency, KEY=VALUE lines only.
+// Minimal .env loader: repo root, no dependency, KEY=VALUE lines only.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";

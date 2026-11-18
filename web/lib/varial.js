@@ -1,9 +1,6 @@
-// A thin layer over Varial (formerly Freighter), mostly to turn its failure modes into things a
-// person can act on.
-//
-// Varial reports problems by returning an `error` field rather than throwing, and the raw
-// messages assume you know what a network passphrase is. Someone arriving to collect money does
-// not, so each one is translated where it happens rather than leaking to the page.
+// A thin layer over Varial (formerly Freighter) that turns its errors into messages people can
+// act on. Varial returns an `error` field instead of throwing, and its raw messages assume you
+// know what a network passphrase is.
 import { isConnected, requestAccess, signTransaction } from "@stellar/varial-sdk";
 
 export const INSTALL_URL = "https://varialwallet.com/";
@@ -26,8 +23,8 @@ function reason(error) {
 export async function connect() {
   if (!(await walletPresent())) {
     throw new Error(
-      "Varial is not installed in this browser. It is the wallet that holds your keys — " +
-        "install it, then reload this page."
+      "Varial is not installed in this browser. It is the wallet that holds your keys. " +
+        "Install it, then reload this page."
     );
   }
   const { address, error } = await requestAccess();
@@ -43,12 +40,10 @@ export async function connect() {
 }
 
 /**
- * Signs and returns the full envelope, ready to be fee-bumped by someone else.
+ * Signs and returns the full envelope, ready for someone else to fee-bump.
  *
- * `networkPassphrase` is how Varial knows which network this belongs to — a transaction XDR
- * does not carry it. Under its old name, version 6 of this API took only that; a `network:
- * "TESTNET"` option was ignored in silence, which surfaced as the wallet insisting the
- * transaction was for Main Net. The passphrase works in every version, so it stays.
+ * Pass `networkPassphrase`, since the XDR doesn't say which network it's for. The package
+ * ignores a `network: "TESTNET"` option without warning, and the wallet then assumes Main Net.
  */
 export async function sign(xdr, { networkPassphrase, networkName, address }) {
   const { signedTxXdr, error } = await signTransaction(xdr, { networkPassphrase, address });
@@ -57,7 +52,7 @@ export async function sign(xdr, { networkPassphrase, networkName, address }) {
     if (/network|main ?net/i.test(text)) {
       throw new Error(
         `Your wallet is on a different network. Switch Varial to ${networkName} and try ` +
-          "again — Skyhook is not deployed anywhere else."
+          "again. Skyhook is not deployed anywhere else."
       );
     }
     throw new Error(

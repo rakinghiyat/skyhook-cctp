@@ -1,7 +1,6 @@
 import Image from 'next/image';
 
-// The stripes behind the hero, from the template. The coloured wash that used to live here now
-// runs the whole page (`components/page-glow`), so this is only the texture.
+// The stripes behind the hero, from the template. The colour lives in `components/page-glow`.
 export default function PageIllustration() {
   return (
     <div

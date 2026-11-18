@@ -9,20 +9,16 @@ use soroban_sdk::{
 mod storage;
 use storage::{DataKey, TTL_EXTEND_TO_LEDGERS, TTL_THRESHOLD_LEDGERS};
 
-// The Hold handler (SPEC.md §3, `handler_id = 2`).
+// The Hold handler (`handler_id = 2`).
 //
-// Records arriving USDC against a destination address when it cannot yet be delivered, and
-// releases it on claim. This is also where the core's fallback ladder lands whenever a named
-// handler fails or an instruction cannot be understood (ARCHITECTURE.md §4, Level 2).
+// Keeps USDC for a recipient who can't receive it yet, and pays it out on claim. The core also
+// falls back here when a handler fails or an instruction can't be read.
 //
-// Holding needs no classic trustline: this contract is a contract address, and contract
-// addresses hold SAC balances in contract storage. The trustline question only arises at
-// payout, which is exactly what `claim` runs into — and handles by simply failing, leaving the
-// held balance untouched.
+// Holding needs no trustline, because a contract keeps SAC balances in its own storage. The
+// trustline only matters at payout: if it's missing, `claim` fails and the balance stays put.
 //
-// There is no fee-bump logic here, and there should not be. This contract's whole obligation
-// is `recipient.require_auth()`. Whether that signature arrives inside a fee-bumped envelope
-// paid for by a sponsor is decided when the transaction is built, off-chain.
+// No fee-bump logic belongs here. This contract only checks `recipient.require_auth()`; who
+// pays the fee is decided off-chain when the transaction is built.
 
 const CORE: Symbol = symbol_short!("CORE");
 const TOKEN: Symbol = symbol_short!("TOKEN");
@@ -49,8 +45,8 @@ pub struct HandlerHold;
 
 #[contractimpl]
 impl HandlerHold {
-    /// Both set once at deploy time and immutable thereafter. `core` is the only contract this
-    /// handler will ever pull funds from, which is what makes `execute` safe to expose.
+    /// Both are set once and never change. `core` is the only contract this handler pulls
+    /// from, which is why `execute` is safe to expose.
     pub fn __constructor(env: Env, core: Address, token: Address) {
         env.storage().instance().set(&CORE, &core);
         env.storage().instance().set(&TOKEN, &token);
@@ -58,18 +54,16 @@ impl HandlerHold {
 
     /// Called by the core. Collects the funds it authorized, then records them.
     ///
-    /// No "only the core may call this" check is needed: the pull below is
-    /// `transfer(core, self, amount)` for the `core` fixed at construction, so it can only
-    /// succeed inside an invocation that particular core authorized. Any other caller gets a
-    /// failed transfer and the whole call reverts, recording nothing.
+    /// No caller check is needed. The pull is `transfer(core, self, amount)` from our own
+    /// core, so it only works when that core authorized it. Anyone else gets a failed transfer
+    /// and the call reverts.
     ///
-    /// `params` are unused — Hold's are empty by definition (SPEC.md §3).
+    /// `params` is unused, since Hold takes none.
     pub fn execute(env: Env, recipient: Address, amount: i128, _params: Bytes) {
         let core: Address = env.storage().instance().get(&CORE).unwrap();
         let token: Address = env.storage().instance().get(&TOKEN).unwrap();
 
-        // Collect first. If this fails the invocation reverts, so the ledger never records a
-        // balance that was not actually received.
+        // Collect first. If it fails everything reverts, so we never record money we didn't get.
         token::TokenClient::new(&env, &token).transfer(
             &core,
             &env.current_contract_address(),
@@ -88,17 +82,15 @@ impl HandlerHold {
 
     /// The recipient collects their own funds.
     ///
-    /// Written as `claim(recipient)` rather than the docs' shorthand `claim()` because Soroban
-    /// has no implicit caller; naming the address explicitly and requiring its authorization is
-    /// what makes it safe.
+    /// It takes `recipient` because Soroban has no implicit caller. Naming the address and
+    /// requiring its signature is what makes it safe.
     pub fn claim(env: Env, recipient: Address) {
         let to = recipient.clone();
         pay_out(&env, recipient, to);
     }
 
-    /// Redirect to an address that is already provisioned, for a recipient whose own account
-    /// cannot receive yet. Still requires the *recipient's* authorization — only they can
-    /// decide where their funds go.
+    /// Pays to another address, for a recipient whose own account can't receive yet. Still
+    /// needs the recipient's signature, since only they decide where their funds go.
     pub fn claim_to(env: Env, recipient: Address, to: Address) {
         pay_out(&env, recipient, to);
     }
@@ -121,8 +113,8 @@ fn pay_out(env: &Env, recipient: Address, to: Address) {
         panic!("nothing held for this recipient");
     }
 
-    // Clear before paying out. If the payout fails — a recipient without a USDC trustline is
-    // the expected case — the whole invocation reverts and the entry comes back untouched.
+    // Clear first. If the transfer fails (usually no USDC trustline), everything reverts and
+    // the entry comes back.
     env.storage().persistent().remove(&key);
 
     let token: Address = env.storage().instance().get(&TOKEN).unwrap();

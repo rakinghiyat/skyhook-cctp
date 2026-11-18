@@ -7,18 +7,12 @@ import { SidebarIcon } from 'lucide-react';
 import ThemeToggle from './theme-toggle';
 
 /**
- * The docs header on phones, replacing Fumadocs' own so the theme toggle can sit between the
- * search and sidebar buttons.
+ * The docs header on phones. It replaces Fumadocs' own so the theme toggle can sit between the
+ * search and sidebar buttons; their only hook, `nav.children`, renders before search.
  *
- * Fumadocs offers one injection point in this bar, `nav.children`, and it renders *before* the
- * search trigger — so it cannot put anything between the two. Taking the whole slot is the only
- * way to choose the order.
- *
- * **This is a copy of Fumadocs' `layouts/docs/slots/header.tsx` with one child inserted**, which
- * means it does not follow along when they change theirs. The parts worth re-checking after a
- * Fumadocs upgrade are the class string below and the shape of `useDocsLayout()`. Everything
- * here is public API: `useDocsLayout` from `layouts/docs`, `buttonVariants` from
- * `components/ui/button`.
+ * It's a copy of Fumadocs' `layouts/docs/slots/header.tsx` with one child added, so it won't
+ * follow their changes. After a Fumadocs upgrade, re-check the class string and the shape of
+ * `useDocsLayout()`. Everything used here is public API.
  */
 export default function DocsHeader(props: ComponentProps<'header'>) {
   const {

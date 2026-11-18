@@ -1,6 +1,5 @@
-// Persistent-storage keys. Registry entries and unresolved balances share the same keyspace,
-// so they're distinguished explicitly here rather than relying on their raw value types
-// happening not to collide.
+// Storage keys. Registry entries and unresolved balances share one keyspace, so each kind
+// gets its own variant to keep them from colliding.
 use soroban_sdk::{contracttype, Address, BytesN};
 
 // ~30 days of margin before an entry would expire, bumped to ~90 days on every write.
@@ -12,11 +11,8 @@ pub const TTL_EXTEND_TO_LEDGERS: u32 = 90 * 17280;
 pub enum DataKey {
     /// handler_id -> handler contract address (append-only, see registry.rs)
     Handler(u32),
-    /// Funds the ladder could not deliver, keyed by the recipient recovered from the
-    /// instruction (ARCHITECTURE.md §4, Level 3).
+    /// Undelivered funds, keyed by the recipient read from the instruction.
     UnresolvedByRecipient(Address),
-    /// Same, but for the case where no recipient could be recovered at all — keyed by the
-    /// CCTP nonce, which is readable straight from the outer message regardless of how
-    /// corrupt the instruction was.
+    /// Undelivered funds when no recipient could be read, keyed by the CCTP nonce instead.
     UnresolvedByNonce(BytesN<32>),
 }

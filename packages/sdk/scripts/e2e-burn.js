@@ -31,12 +31,12 @@ async function main() {
   const amount = BigInt(Math.round(Number(process.env.AMOUNT ?? 1) * 1_000_000));
   const handlerId = Number(process.argv[2] ?? 1);
 
-  // Defaults to the Freighter demo account — a recipient that cannot yet receive USDC, which
-  // is the case Hold exists for. Override with RECIPIENT=G... to aim somewhere else.
+  // Defaults to the demo wallet account (FREIGHTER_RECIPIENT), which can't receive USDC yet.
+  // That's the case Hold is for. Set RECIPIENT=G... to use another.
   const recipient = process.env.RECIPIENT || env.FREIGHTER_RECIPIENT || env.RELAYER_PUBLIC_KEY;
 
-  // Deposit (handler_id 1) carries the vault address in params; every other handler here
-  // carries none. VAULT=C... overrides the vault, including with a deliberately wrong one.
+  // Deposit (handler_id 1) takes the vault address as params; the others take none. Set
+  // VAULT=C... to use another vault, even a wrong one on purpose.
   const params =
     handlerId === 1
       ? depositParams(process.env.VAULT || env.REFERENCE_VAULT_ID)
@@ -44,9 +44,8 @@ async function main() {
 
   const instruction = buildInstruction(recipient, handlerId, params);
 
-  // The library assembles the burn and refuses the addresses Circle calls unrecoverable, so this
-  // script no longer decides any of it — which is the point: what a sender runs is the same code
-  // path the package ships.
+  // The library builds the burn and refuses unrecoverable addresses, so this script runs the
+  // same code a sender would.
   const burn = buildBurnParameters({
     amount,
     forwarder: env.CCTP_FORWARDER_ID,

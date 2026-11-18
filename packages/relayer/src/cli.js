@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // relay <burnTxHash>
 //
-// Drives one CCTP burn to completion: wait for Circle's attestation, re-attest if the message
-// never reached finality, read the message ourselves, and submit it to Skyhook.
+// Takes one CCTP burn to the end: wait for Circle's attestation, re-attest if it never reached
+// finality, read the message, and submit it to Skyhook.
 //
-// Nothing runs an attached instruction until a relayer does this. The forwarder credits the
-// recipient rather than invoking it, so without this step the funds arrive and sit there.
+// Without a relayer the instruction never runs. The forwarder only credits the recipient, it
+// doesn't call it.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -41,8 +41,8 @@ async function main() {
   const env = loadEnv();
   const api = env.CIRCLE_ATTESTATION_API;
 
-  // Fail here with something actionable rather than deep inside the Stellar SDK, where an
-  // empty key surfaces as "invalid version byte" and tells you nothing about the cause.
+  // Fail early with a clear message. Deep in the Stellar SDK an empty key just says
+  // "invalid version byte".
   const required = ["CIRCLE_ATTESTATION_API", "SOURCE_DOMAIN_ID", "STELLAR_RPC_URL", "STELLAR_HORIZON_URL", "SKYHOOK_CORE_ID"];
   const missing = required.filter((k) => !env[k]);
   if (missing.length) {
@@ -50,7 +50,7 @@ async function main() {
   }
   if (!env.RELAYER_SECRET_KEY) {
     throw new Error(
-      "RELAYER_SECRET_KEY is empty in .env — the relayer needs its own key to pay the " +
+      "RELAYER_SECRET_KEY is empty in .env. The relayer needs its own key to pay the " +
         "invocation fee. Populate it with ./scripts/fill-stellar-keys.sh (the secret is read " +
         "straight from the stellar CLI keystore and never printed)."
     );
@@ -68,15 +68,14 @@ async function main() {
   });
   log(`attestation complete, nonce ${message.eventNonce}`);
 
-  // 2. Read it ourselves — this is where the API's null address fields get recovered.
+  // 2. Read it ourselves, to recover the address fields the API returns as null.
   const parsed = reportRawHexParse(message, log);
 
-  // 3. Re-attest only if the message never reached finality. Asking for a finalized message
-  //    would be noise, and pretending otherwise would misrepresent what happened.
+  // 3. Re-attest only if the message never reached finality.
   if (isFinalized(parsed)) {
     log(
       `finality ${parsed.finalityThresholdExecuted} >= 2000, so no re-attestation is needed ` +
-        `— this burn was attested as finalized`
+        `(this burn was attested as finalized)`
     );
   } else {
     log(`finality ${parsed.finalityThresholdExecuted} < 2000: this is a pre-finality message`);

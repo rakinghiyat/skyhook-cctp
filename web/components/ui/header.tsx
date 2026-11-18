@@ -4,15 +4,12 @@ import MobileMenu from './mobile-menu';
 
 const REPO = 'https://github.com/rakinghiyat/skyhook-cctp';
 
-// The template's floating pill, with our own arrangement inside it: lockup, Docs and Claim all to
-// the left, and the two social marks on the right.
+// The template's floating pill: lockup, Docs and Claim on the left, the two social marks on the
+// right.
 //
-// No search and no theme switch. Both belong to /docs, where Fumadocs provides them; pulling them
-// in here would drag the dark theme onto a page the template never designed for one.
+// No search and no theme switch. Those belong to /docs and would bring the dark theme here.
 //
-// Below `md` the whole middle collapses into a menu. The pill had run out of room — lockup, two
-// links and two icons came to 347px against the 360px of a common Android — and a menu returns
-// the width rather than shaving another pixel off the gaps.
+// Below `md` the middle becomes a menu, since it needed 347px of a 360px phone.
 export default function Header() {
   return (
     <header className="fixed top-2 z-30 w-full md:top-6">
@@ -35,10 +32,8 @@ export default function Header() {
             </ul>
           </nav>
 
-          {/* Both marks in brand blue, the colour they already had in the footer — the footer's
-              Social column is gone, so this is now the only place they appear. Both SVGs use a
-              32 viewBox with the glyph drawn at the same scale, so they need no size correction
-              against each other. */}
+          {/* Both marks in brand blue. This is the only place they appear now. Both SVGs use
+              a 32 viewBox at the same scale, so they match in size. */}
           <div className="hidden items-center md:flex">
             <a
               href="https://x.com/skyhookcctp"

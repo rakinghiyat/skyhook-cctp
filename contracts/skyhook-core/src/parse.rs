@@ -1,14 +1,7 @@
-// Parses the Skyhook instruction out of a raw CCTP message. Never panics — every failure
-// path returns `Parsed::Malformed` so a caller can route to the Hold handler instead of
-// aborting the whole invocation (docs/ARCHITECTURE.md §4).
+// Reads the Skyhook instruction from a raw CCTP message. Never panics: every failure returns
+// `Parsed::Malformed`, so the caller can fall back to Hold instead of reverting.
 //
-// Byte offsets below are not guesses: they were reconstructed and verified field-by-field
-// against two real burn+attestation cycles run on Testnet (raw message hex cross-checked
-// against Circle's own decoded fields, byte range by byte range).
-//
-// Not yet called from `execute()` (see lib.rs) — wiring it into the fallback ladder is the
-// next task. Fully built and tested here; `#[allow(dead_code)]` is temporary until that call
-// site exists.
+// The byte offsets were checked field by field against two real Testnet burns.
 #![allow(dead_code)]
 use soroban_sdk::{Address, Bytes, BytesN, Env};
 
@@ -43,11 +36,9 @@ pub struct Instruction {
     pub params: Bytes,
 }
 
-/// Outcome of parsing. `Malformed` carries whatever `fallback_recipient` could be recovered —
-/// `None` only when the message was too short/corrupt to even reach the recipient field, or
-/// when those bytes aren't a valid strkey. This is what lets a future caller choose between
-/// ARCHITECTURE.md §4's Level-2 (recipient-keyed) and Level-3 (nonce-keyed) fallback without
-/// re-parsing.
+/// Result of parsing. `Malformed` keeps the recipient if one could be read. It is `None` when
+/// the message is too short to reach that field or the bytes aren't a valid strkey. The caller
+/// uses this to pick Hold (has a recipient) or the nonce record (has none).
 #[derive(Debug, PartialEq, Eq)]
 pub enum Parsed {
     Instruction(Instruction),
@@ -62,9 +53,8 @@ pub fn parse(_env: &Env, message: &Bytes) -> Parsed {
     }
 }
 
-/// The CCTP nonce, read straight from the outer message header. Available regardless of how
-/// corrupt the hook data or instruction turns out to be, which is what makes it usable as the
-/// last-resort `unresolved` key (ARCHITECTURE.md §4, Level 3).
+/// The CCTP nonce from the outer header. It can be read however broken the instruction is,
+/// so it works as the last-resort key for unresolved funds.
 pub fn nonce(message: &Bytes) -> Option<BytesN<32>> {
     if message.len() < NONCE_OFFSET + NONCE_LEN {
         return None;
@@ -83,9 +73,8 @@ fn extract_hook_data(message: &Bytes) -> Option<Bytes> {
     Some(message.slice(HOOK_DATA_OFFSET..message.len()))
 }
 
-/// hookData -> the Skyhook envelope bytes (hookData[32+L..]). Defensively re-validates
-/// Circle's magic/version/L rather than trusting it — that trust doesn't extend to an
-/// arbitrary future message.
+/// hookData -> the Skyhook envelope (hookData[32+L..]). Checks Circle's magic, version and L
+/// again instead of trusting them, since a future message might not follow the format.
 fn locate_instruction(hook_data: &Bytes) -> Option<Bytes> {
     if hook_data.len() < HOOK_FRAME_FIXED_LEN {
         return None;
@@ -107,10 +96,8 @@ fn locate_instruction(hook_data: &Bytes) -> Option<Bytes> {
     Some(hook_data.slice(instruction_start..hook_data.len()))
 }
 
-/// Skyhook envelope bytes -> Parsed. `fallback_recipient` sits at a version-independent fixed
-/// prefix (offsets 0..57) by design, so it's recovered whenever the envelope reaches 57 bytes
-/// and those bytes decode as a valid strkey — even if `version` itself is unrecognized or
-/// everything after is garbage.
+/// Skyhook envelope -> Parsed. The recipient always sits in the first 57 bytes, whatever the
+/// version, so we can recover it even when the version is unknown or the rest is garbage.
 fn parse_envelope(envelope: &Bytes) -> Parsed {
     if envelope.len() < ENV_RECIPIENT_HEADER_LEN {
         return Parsed::Malformed { fallback_recipient: None };
@@ -158,9 +145,8 @@ fn parse_envelope(envelope: &Bytes) -> Parsed {
     })
 }
 
-/// Validates `strkey` (must be exactly 56 bytes) as a real Stellar strkey (account or
-/// contract) via `stellar-strkey`'s panic-free `Result` API before ever calling
-/// `Address::from_string_bytes`, which panics on anything that isn't a valid strkey.
+/// Checks the 56 bytes are a valid G or C strkey before calling `Address::from_string_bytes`,
+/// which panics on anything invalid.
 fn address_from_strkey_bytes(strkey: &Bytes) -> Option<Address> {
     if strkey.len() != ENV_RECIPIENT_STRKEY_LEN {
         return None;
@@ -308,11 +294,8 @@ mod tests {
             .collect()
     }
 
-    /// Real raw CCTP message captured from an actual Testnet burn+attestation cycle
-    /// (packages/sdk/scripts/.gate-attestation-2-result.json), not a synthetic fixture. Its
-    /// hookData trailing bytes are plain ASCII test text from the gate work, not a real
-    /// Skyhook envelope, so this only exercises header/hookData extraction against real wire
-    /// bytes — it correctly comes back Malformed once envelope parsing takes over.
+    /// A real CCTP message from a Testnet burn, not a fixture. Its payload is ASCII test text,
+    /// not a Skyhook envelope, so this only checks hookData extraction. Malformed is expected.
     #[test]
     fn hook_data_extraction_matches_real_testnet_message() {
         let env = Env::default();
@@ -324,7 +307,7 @@ mod tests {
         let expected = Bytes::from_slice(&env, &hex_decode(expected_hookdata_hex));
         assert_eq!(hd, expected, "extracted hookData must match what Circle's own API returned during the gate");
 
-        // The gate's trailing test payload isn't a real Skyhook envelope — correctly Malformed.
+        // The test payload isn't a Skyhook envelope, so Malformed is right.
         assert_eq!(
             parse(&env, &msg),
             Parsed::Malformed { fallback_recipient: None }

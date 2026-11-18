@@ -2,14 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { buildBurnParameters, buildInstruction, depositParams, STELLAR_DOMAIN } from "../src/index.js";
 
-// SOW D3 asks the payload builder to validate "addresses against the two misconfigurations Circle
-// flags as unrecoverable". These tests pin both, and the reason they are worth pinning is in
-// EVIDENCE.md §9: once a burn is out, its nonce is spent. A message that cannot be delivered
-// cannot be retried, refunded or rebuilt. So the only place these mistakes can be caught is
-// before signing, which is what this module exists for.
+// The builder must refuse the two address mistakes Circle calls unrecoverable. Once a burn is
+// out it can't be retried or refunded, so these checks before signing are the only chance.
 //
-// The addresses below are the real Testnet ones, so the last test can compare against a transfer
-// that actually landed rather than against the builder's own idea of itself.
+// The addresses are the real Testnet ones, so the last test compares against a real transfer.
 
 const FORWARDER = "CA66Q2WFBND6V4UEB7RD4SAXSVIWMD6RA4X3U32ELVFGXV5PJK4T4VSZ";
 const SKYHOOK = "CCOMST7FEDLYJ5MXZTVKVKMK43AQP2U2AZEZRHE3XHYO6UF6LKC2654F";
@@ -25,21 +21,21 @@ const base = {
   burnToken: USDC_ON_ARC,
 };
 
-test("the correct values need no arguments — both addresses default to the forwarder", () => {
+test("the correct values need no arguments: both addresses default to the forwarder", () => {
   const burn = buildBurnParameters(base);
   assert.equal(burn.mintRecipient, burn.destinationCaller);
   assert.equal(burn.destinationDomain, STELLAR_DOMAIN);
   assert.equal(burn.args.length, 8, "depositForBurnWithHook takes eight arguments");
 });
 
-test("mintRecipient as a G… account is refused — Circle's first unrecoverable case", () => {
+test("mintRecipient as a G… account is refused (Circle's first unrecoverable case)", () => {
   assert.throws(
     () => buildBurnParameters({ ...base, mintRecipient: G_ADDRESS }),
     /G… account address.*permanently stuck/s
   );
 });
 
-test("mintRecipient as an M… muxed address is refused — Circle names muxed explicitly", () => {
+test("mintRecipient as an M… muxed address is refused (Circle names muxed explicitly)", () => {
   assert.throws(
     () => buildBurnParameters({ ...base, mintRecipient: M_ADDRESS }),
     /muxed address.*permanently stuck/s
@@ -47,16 +43,14 @@ test("mintRecipient as an M… muxed address is refused — Circle names muxed e
 });
 
 test("mintRecipient set to Skyhook's own address names the actual mistake", () => {
-  // The plausible error, not a random one: naming the contract that should act on the funds.
-  // A generic "must be the forwarder" would leave the reader none the wiser about where their
-  // address was supposed to go.
+  // The likely mistake: naming Skyhook itself. The error should say where that address goes.
   assert.throws(
     () => buildBurnParameters({ ...base, mintRecipient: SKYHOOK }),
     /Skyhook's own address.*belongs in forwardRecipient/s
   );
 });
 
-test("a wrong destinationCaller is refused — Circle's second unrecoverable case", () => {
+test("a wrong destinationCaller is refused (Circle's second unrecoverable case)", () => {
   assert.throws(
     () => buildBurnParameters({ ...base, destinationCaller: SKYHOOK }),
     /destinationCaller must be CctpForwarder.*permanently stuck/s
@@ -64,8 +58,8 @@ test("a wrong destinationCaller is refused — Circle's second unrecoverable cas
 });
 
 test("forwardRecipient may not be the forwarder itself", () => {
-  // Not one of Circle's two: the forwarder rejects this itself (InvalidForwardRecipient), so the
-  // mint reverts and the burn is left undeliverable. Same loss, different cause.
+  // Not one of Circle's two: the forwarder rejects this (InvalidForwardRecipient), so the mint
+  // reverts after the burn.
   assert.throws(
     () => buildBurnParameters({ ...base, forwardRecipient: FORWARDER }),
     /must not be CctpForwarder itself/
@@ -90,11 +84,9 @@ test("the instruction travels in the hook data, after forwardRecipient", () => {
 });
 
 test("it reproduces the burn that landed on 2026-09-30, argument for argument", () => {
-  // The transfer recorded in EVIDENCE.md §5 row 3: burn 0xd393ec24… → Stellar 058650a9…, a
-  // Deposit instruction naming the wrong-asset vault, which the handler refused and the ladder
-  // routed to Hold. Those arguments were assembled by hand in scripts/e2e-burn.js; this asserts
-  // the library produces the same ones, so adopting it changed nothing about what goes on the
-  // wire.
+  // A real transfer: burn 0xd393ec24… → Stellar 058650a9…, a Deposit to the wrong-asset vault
+  // that ended in Hold. Its arguments were built by hand in scripts/e2e-burn.js; the library
+  // must produce the same ones.
   const vault = "CBUJTJXUM4N2SFYU5B7BLMREA2BPWNYT2RFZ4NSUEONU2FPAT2HG5RMI";
   const instruction = buildInstruction(RECIPIENT, 1, depositParams(vault));
   const burn = buildBurnParameters({ ...base, instruction });
@@ -104,9 +96,9 @@ test("it reproduces the burn that landed on 2026-09-30, argument for argument", 
   assert.deepEqual(burn.args, [
     1_000_000n,
     27,
-    forwarderBytes32, // mintRecipient — the forwarder, read back off-chain in EVIDENCE.md §10
+    forwarderBytes32, // mintRecipient: the forwarder
     USDC_ON_ARC,
-    forwarderBytes32, // destinationCaller — the same
+    forwarderBytes32, // destinationCaller: the same
     500n,
     1000,
     burn.hookData,

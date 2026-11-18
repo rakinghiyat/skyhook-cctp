@@ -1,13 +1,10 @@
-// The guarantees, on the layout Circle uses for "How CCTP works": a small eyebrow, one large
-// left-aligned headline, then plain columns — icon above, bold title, body. No cards, no rules,
-// no boxes. The simplicity is the point; the previous version set the icon inline beside the
-// title, which made each item read as a label rather than as a claim worth stopping on.
+// The guarantees, laid out like Circle's "How CCTP works": a small eyebrow, one large headline,
+// then plain columns (icon, bold title, body). No cards or boxes.
 //
-// Icons are outline rather than filled, and dark rather than brand blue — again Circle's
-// treatment. Six identical ticks would carry no information, so each is drawn for what it says.
+// Icons are dark outlines, like Circle's, and each one is drawn for what it says.
 //
-// The content is the fallback ladder, because that is the claim the project has to defend — not
-// "it is fast" but "your money does not disappear when something goes wrong".
+// The content is the fallback ladder, since the main promise is that money doesn't disappear
+// when something goes wrong.
 const FEATURES = [
   {
     title: 'Executed on arrival',
@@ -17,7 +14,7 @@ const FEATURES = [
         <path d="M3.5 14v5.5a1.5 1.5 0 0 0 1.5 1.5h14a1.5 1.5 0 0 0 1.5-1.5V14" />
       </>
     ),
-    body: 'A Deposit instruction places the USDC into a SEP-56 vault in the same transaction that delivers it. No second step, and no USDC trustline — vault shares live in the vault.',
+    body: 'A Deposit instruction places the USDC into a SEP-56 vault in the same transaction that delivers it. No second step, and no USDC trustline: vault shares live in the vault.',
   },
   {
     title: 'Held, not bounced',
@@ -38,7 +35,7 @@ const FEATURES = [
         <path d="M8 13.5h7.5M8 17h4.5" />
       </>
     ),
-    body: 'If Hold fails too, the funds stay in the contract marked unresolved. That last step performs no transfer and no external call — only a storage write, so it cannot fail.',
+    body: 'If Hold fails too, the funds stay in the contract marked unresolved. That last step performs no transfer and no external call, only a storage write, so it cannot fail.',
   },
   {
     title: 'The sender chooses',

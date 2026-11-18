@@ -1,31 +1,26 @@
-// Builds the `depositForBurnWithHook` arguments for a Skyhook transfer, and refuses the address
-// mistakes that cannot be undone afterwards (SOW §3, SPEC.md §1).
+// Builds the `depositForBurnWithHook` arguments for a Skyhook transfer, and refuses address
+// mistakes that can't be undone.
 //
-// Every other module here is pure encoding. This is the one that says *no*, and it says it before
-// anything is signed — because after the burn there is nothing left to fix. The nonce is spent,
-// and a message that cannot be delivered leaves the USDC burned on the source chain with no way
-// to mint it. EVIDENCE.md §9 records the one time that happened in this project, and it cost a
-// permanently unrecoverable 1 USDC.
+// These checks run before anything is signed, because after the burn nothing can be fixed. A
+// message that can't be delivered leaves the USDC burned with no way to mint it. This project
+// lost 1 USDC that way once.
 //
-// Nothing is sent from here. The caller keeps their own wallet client, so this package stays free
-// of any chain library — which is also why `args` comes back in the ABI's exact order. That order
-// is where a hand-written call goes wrong, and `mintRecipient` and `destinationCaller` sit on
-// either side of `burnToken` looking interchangeable when they are not.
+// Nothing is sent from here; the caller uses their own wallet client. `args` comes back in the
+// ABI's exact order, since `mintRecipient` and `destinationCaller` are easy to swap by hand.
 import { StrKey } from "@stellar/stellar-sdk";
 import { buildHookData, toHex } from "./hook-data.js";
 
 /** Stellar's CCTP domain id. */
 export const STELLAR_DOMAIN = 27;
 
-/** Circle's fast-transfer defaults, unchanged across every Testnet run in this project. */
+/** Circle's fast-transfer defaults, used on every Testnet run so far. */
 const DEFAULT_MAX_FEE = 500n;
 const DEFAULT_MIN_FINALITY_THRESHOLD = 1000;
 
 /**
- * Every address in the burn frame has to be a contract. Circle names the alternative explicitly:
- * a `mintRecipient` pointing at a user or muxed address leaves funds *"permanently stuck and
- * cannot be recovered"*. G… and M… therefore get their own messages rather than a generic one,
- * because those are the two forms someone actually reaches for by mistake.
+ * Every address in the burn has to be a contract. Circle warns that a user or muxed
+ * `mintRecipient` leaves funds "permanently stuck". G… and M… get their own messages because
+ * those are the usual mistakes.
  */
 function assertIsContract(label, value) {
   if (typeof value !== "string" || value === "") {
@@ -51,10 +46,8 @@ function assertIsContract(label, value) {
 /**
  * Builds the burn parameters for one Skyhook transfer.
  *
- * `mintRecipient` and `destinationCaller` both default to `forwarder`, which is the only correct
- * value for either. They are still accepted as overrides so that passing a wrong one is *caught*
- * rather than quietly impossible to express — a library that cannot be asked the wrong question
- * also cannot warn you that you asked it.
+ * `mintRecipient` and `destinationCaller` default to `forwarder`, the only correct value. They
+ * can still be passed, so a wrong one gets a clear error instead of being silently ignored.
  *
  * @param {object} p
  * @param {bigint|number|string} p.amount        Amount in the source chain's 6-decimal USDC.
@@ -82,8 +75,7 @@ export function buildBurnParameters({
   minFinalityThreshold = DEFAULT_MIN_FINALITY_THRESHOLD,
   destinationDomain = STELLAR_DOMAIN,
 }) {
-  // A zero-amount burn still spends a nonce, so it is a mistake worth catching rather than a
-  // harmless no-op.
+  // A zero burn still spends a nonce, so treat it as a mistake.
   const value = BigInt(amount ?? 0);
   if (value <= 0n) {
     throw new Error(`amount must be greater than zero, got ${amount}`);
@@ -94,24 +86,21 @@ export function buildBurnParameters({
   assertIsContract("mintRecipient", mintRecipient);
   assertIsContract("destinationCaller", destinationCaller);
 
-  // Circle's first unrecoverable misconfiguration. The likeliest way to reach it is not a random
-  // address but a perfectly reasonable one: Skyhook's, on the assumption that naming the contract
-  // that should act on the funds is how you route them there. It is not — that address belongs in
-  // `forwardRecipient`, inside the hook data, and the mint always goes to the forwarder.
+  // Circle's first unrecoverable mistake. The likely wrong value is Skyhook's own address, but
+  // that belongs in `forwardRecipient`. The mint always goes to the forwarder.
   if (mintRecipient !== forwarder) {
     throw new Error(
       mintRecipient === forwardRecipient
         ? `mintRecipient is Skyhook's own address. It belongs in forwardRecipient, inside the ` +
-          `hook data — the mint always goes to CctpForwarder (${forwarder}), which then forwards. ` +
+          `hook data. The mint always goes to CctpForwarder (${forwarder}), which then forwards. ` +
           `Circle: a wrong mintRecipient leaves the funds permanently stuck and unrecoverable.`
         : `mintRecipient must be CctpForwarder (${forwarder}), got ${mintRecipient}. Circle: a ` +
           `wrong mintRecipient leaves the funds permanently stuck and unrecoverable.`
     );
   }
 
-  // Circle's second. `destinationCaller` restricts who may call `receiveMessage` on the
-  // destination chain; anything other than the forwarder means the message this burn produces can
-  // never be delivered through it.
+  // Circle's second. `destinationCaller` limits who can deliver the message, so anything other
+  // than the forwarder means it can never be delivered.
   if (destinationCaller !== forwarder) {
     throw new Error(
       `destinationCaller must be CctpForwarder (${forwarder}), got ${destinationCaller}. Circle: ` +
@@ -119,12 +108,11 @@ export function buildBurnParameters({
     );
   }
 
-  // Not one of Circle's two, but the same class of loss and free to check. The forwarder rejects
-  // itself as a `forwardRecipient` (`InvalidForwardRecipient`, EVIDENCE.md §9), so the mint would
-  // revert — leaving the burn done and undeliverable.
+  // Not one of Circle's two, but the same kind of loss. The forwarder rejects itself as
+  // `forwardRecipient` (`InvalidForwardRecipient`), so the mint would revert after the burn.
   if (forwardRecipient === forwarder) {
     throw new Error(
-      `forwardRecipient must not be CctpForwarder itself — the forwarder rejects that and the ` +
+      `forwardRecipient must not be CctpForwarder itself. The forwarder rejects that and the ` +
         `mint would revert, stranding the burn. It should be Skyhook's contract address.`
     );
   }
@@ -143,7 +131,7 @@ export function buildBurnParameters({
     maxFee: fee,
     minFinalityThreshold,
     hookData,
-    // Exactly the ABI's order, so a caller never has to get it right themselves.
+    // In the ABI's order, so callers don't have to get it right.
     args: [
       value,
       destinationDomain,

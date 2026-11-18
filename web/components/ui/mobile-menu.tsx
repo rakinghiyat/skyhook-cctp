@@ -4,18 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
 /**
- * The phone menu: a hamburger that opens the four destinations the wide header shows inline.
+ * The phone menu: a hamburger with the four links the wide header shows inline. The full header
+ * needed 347px, and a common Android is 360px wide, so there was no room left.
  *
- * The header has no room left. It carries a lockup, two links and two icons, which came to 347px
- * against the 360px of a common Android — thirteen pixels of slack, and every future addition
- * would have had to take something out. Collapsing it into a menu returns the whole width.
- *
- * Closing is handled three ways because a menu that only closes on its own button is a trap on a
- * touch screen: the toggle, a tap anywhere outside, and Escape.
- *
- * No rule between the links and the social entries: four rows is short enough to read as one
- * list. X is the only icon-only row, so its name lives in `aria-label` where a screen reader
- * still reaches it.
+ * It closes three ways (the button, a tap outside, Escape), since a menu that only closes on its
+ * own button is annoying on a touch screen. X has no text, so its name is in `aria-label`.
  */
 export default function MobileMenu({ repo }: { repo: string }) {
   const [open, setOpen] = useState(false);

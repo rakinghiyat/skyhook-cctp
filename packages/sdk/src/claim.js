@@ -1,15 +1,11 @@
 // Claiming funds out of the Hold handler, with or without a sponsor.
 //
-// Unlike the rest of this package, these functions talk to the network. They live here rather
-// than in any one caller because three separate things need exactly this logic and must not
-// drift apart: the CLI script, the claim page in the browser, and the serverless function that
-// pays on the recipient's behalf.
+// Unlike the rest of this package, these functions use the network. They live here so the CLI
+// script, the claim page and the sponsor function all share one copy.
 //
-// The split between building and submitting is not incidental. `claim(recipient)` requires the
-// recipient's authorization and nothing else, so the transaction has to be signed by them —
-// but who *pays* for it is decided afterwards, in an envelope that cannot alter what was
-// signed. That is what lets an application cover its users' fees without being trusted with
-// anything.
+// Building and submitting are separate on purpose. The recipient signs the claim; who pays is
+// decided later, in a fee bump that can't change what was signed. So an app can pay its users'
+// fees without being trusted with their funds.
 import {
   Keypair,
   TransactionBuilder,
@@ -44,12 +40,11 @@ export async function heldAmount({ rpcUrl, holdId, recipient, networkPassphrase 
 /**
  * Builds the claim for the recipient to sign.
  *
- * The transaction is simulated and assembled first: a Soroban transaction carries its own
- * footprint and resource fee, and a signature over an unassembled one would not match what the
- * network validates.
+ * It is simulated and assembled first, because a Soroban transaction carries its own footprint
+ * and fee, and a signature over the unassembled one wouldn't match.
  *
- * The timebound is deliberately long. A person is signing this through a wallet, and five
- * minutes — which looks generous — expired mid-flow the first time this was done by hand.
+ * The timeout is long on purpose. A person signs this in a wallet, and five minutes ran out
+ * the first time we tried it by hand.
  */
 export async function buildClaimTransaction({
   rpcUrl,
@@ -81,11 +76,10 @@ export async function buildClaimTransaction({
 }
 
 /**
- * Wraps an already-signed claim in a fee bump the sponsor pays, and submits it.
+ * Wraps a signed claim in a fee bump paid by the sponsor, and submits it.
  *
- * Refuses anything that is not a signed `claim` on the expected Hold contract. Without that
- * check this would be a free fee-payer for any transaction at all — ordinary input validation,
- * not the anti-abuse machinery that a production sponsor would also need.
+ * Refuses anything that isn't a signed `claim` on the expected Hold contract. Otherwise the
+ * sponsor would pay for any transaction. This is basic validation, not full anti-abuse.
  */
 export async function feeBumpAndSubmit({
   rpcUrl,
@@ -97,7 +91,7 @@ export async function feeBumpAndSubmit({
   const inner = TransactionBuilder.fromXDR(signedXdr, networkPassphrase);
 
   if (!inner.signatures?.length) {
-    throw new Error("the transaction carries no signature — the recipient must sign it first");
+    throw new Error("the transaction has no signature. The recipient must sign it first.");
   }
   if (expectedHoldId) assertIsClaimOn(inner, expectedHoldId);
 
@@ -134,8 +128,8 @@ export function assertIsClaimOn(tx, holdId) {
     throw new Error(`expected a contract invocation, found ${op.type}`);
   }
 
-  // `func.value` is the armed union's payload; on an InvokeContract host function it holds the
-  // contract address and the function name as plain fields, not accessors.
+  // `func.value` is the union's payload. For InvokeContract it has the contract address and
+  // function name as plain fields, not accessors.
   const invocation = op.func?.value;
   if (!invocation?.contractAddress) {
     throw new Error("this is not a contract invocation");
@@ -152,17 +146,17 @@ export function assertIsClaimOn(tx, holdId) {
   }
 }
 
-/** Names the failures a claim actually hits, rather than passing the raw code along. */
+/** Turns the common claim failures into readable messages. */
 export function explainClaimError(raw) {
   const text = String(raw);
   if (/#13\b/.test(text)) {
     return (
       "the recipient has no USDC trustline, so the payout has nowhere to land. Add the USDC " +
-      "asset in the wallet first — the held balance is untouched until then."
+      "asset in the wallet first. The held balance stays put until then."
     );
   }
   if (/#6908\b/.test(text)) {
-    return "already claimed — nothing further is needed.";
+    return "already claimed. Nothing more to do.";
   }
   return text;
 }

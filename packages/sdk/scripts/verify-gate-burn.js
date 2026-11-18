@@ -1,5 +1,5 @@
-// Re-derives the exact bytes used in the burn we just sent, and checks field boundaries
-// programmatically instead of eyeballing printed hex.
+// Rebuilds the bytes from the burn we just sent and checks the field boundaries in code, not
+// by reading hex.
 import { StrKey } from "@stellar/stellar-sdk";
 import { loadEnv } from "./env.js";
 import { buildHookData, toHex } from "../src/hook-data.js";
@@ -24,6 +24,6 @@ console.log("trailing payload bytes:", trailing.length, "(expect 0 for baseline 
 const forwarderRaw = StrKey.decodeContract(env.CCTP_FORWARDER_ID);
 console.log("\nforwarder raw bytes length:", forwarderRaw.length, "(expect 32)");
 console.log("forwarder bytes32 hex:", toHex(forwarderRaw));
-// Round-trip: re-encode raw bytes back to strkey and confirm it matches the original C-address.
+// Round trip: turn the raw bytes back into a strkey and compare with the original C-address.
 const roundTrip = StrKey.encodeContract(forwarderRaw);
 console.log("round-trips back to original strkey:", roundTrip === env.CCTP_FORWARDER_ID, "->", roundTrip);

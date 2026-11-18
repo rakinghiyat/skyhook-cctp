@@ -5,8 +5,7 @@ import DocsHeader from '@/components/ui/docs-header';
 
 export default function Layout({ children }: LayoutProps<'/docs'>) {
   return (
-    // The phone header is ours so the theme toggle can sit between search and sidebar;
-    // Fumadocs' only hook in that bar renders before the search button. See the component.
+    // Our own phone header, so the theme toggle can sit between search and sidebar.
     <DocsLayout tree={source.getPageTree()} {...baseOptions()} slots={{ header: DocsHeader }}>
       {children}
     </DocsLayout>

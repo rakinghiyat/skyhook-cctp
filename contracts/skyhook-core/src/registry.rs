@@ -1,13 +1,11 @@
-// Permissionless, append-only handler registry: handler_id (u32) -> handler contract address.
-// Anyone may register a new id; nobody may rebind an id that's already bound
-// (docs/ARCHITECTURE.md §3) — that's what makes an id safe for a sender to encode.
+// Handler registry: handler_id (u32) -> handler contract address. Anyone can register a new
+// id, but nobody can rebind one. That is what makes an id safe for a sender to use.
 use soroban_sdk::{Address, Env};
 
 use crate::storage::DataKey;
 
-// TTL is bumped on write, not on read. A resolve() miss (expired or never-registered) is
-// safely absorbed by the fallback ladder (ARCHITECTURE.md §4), so this is an availability
-// choice, not a fund-safety one.
+// TTL is extended on write, not on read. If an entry expires, resolve() misses and the
+// fallback ladder takes over, so funds stay safe either way.
 use crate::storage::{TTL_EXTEND_TO_LEDGERS, TTL_THRESHOLD_LEDGERS};
 
 /// Registers `contract` under `id`. Panics if `id` is already bound.
@@ -75,8 +73,7 @@ mod tests {
         });
     }
 
-    // A bare contract with no storage of its own, just so these tests have a contract
-    // context to run persistent-storage calls inside of.
+    // An empty contract, so the tests have somewhere to run storage calls.
     #[soroban_sdk::contract]
     struct TestContract;
     #[soroban_sdk::contractimpl]

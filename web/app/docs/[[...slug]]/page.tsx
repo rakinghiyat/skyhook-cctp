@@ -23,8 +23,7 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
     <DocsPage
       toc={page.data.toc}
       full={page.data.full}
-      // Above "On this page" rather than in the sidebar footer. `header` is Fumadocs' own hook
-      // for content at the top of the TOC column, so no CSS is needed to place it.
+      // Above "On this page", using Fumadocs' own `header` slot, so no CSS is needed.
       tableOfContent={{ header: <ThemeSwitch className="-mt-4 mb-3 w-fit" /> }}
     >
       <DocsTitle>{page.data.title}</DocsTitle>

@@ -27,5 +27,5 @@ Thumbs.db
 *.md
 !README.md
 
-# Scratch output from run scripts (burn results, attestations) — regenerable, not source.
+# Scratch output from scripts (burn results, attestations). Can be regenerated.
 packages/*/scripts/.*.json

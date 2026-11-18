@@ -3,18 +3,15 @@ import './global.css';
 import { Figtree } from 'next/font/google';
 import type { Metadata } from 'next';
 
-// Circle sets its pages in Circular XX, which is a Lineto typeface licensed to them and not
-// something we can use. Figtree is the closest thing that is free: the same geometric skeleton,
+// Circle uses Circular XX, a licensed font. Figtree is the closest free match: geometric,
 // double-storey `a`, single-storey `g`, tall x-height.
 const figtree = Figtree({ subsets: ['latin'], display: 'swap' });
 
-// Where the Open Graph images resolve from. Without this Next falls back to localhost, and every
-// social preview of this site would point at a machine nobody else can reach — which matters,
-// because the demo video is published on X and the link travels with it.
+// Where Open Graph images resolve from. Without it Next uses localhost, and link previews (like
+// the demo video post on X) break.
 //
-// `VERCEL_PROJECT_PRODUCTION_URL` is set by the platform and always names the production domain,
-// even in a preview build, so previews advertise the real images rather than their own throwaway
-// URL. `NEXT_PUBLIC_SITE_URL` overrides it for any other host.
+// Vercel sets `VERCEL_PROJECT_PRODUCTION_URL` to the production domain, even in previews.
+// `NEXT_PUBLIC_SITE_URL` overrides it for other hosts.
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
   (process.env.VERCEL_PROJECT_PRODUCTION_URL
@@ -23,7 +20,7 @@ const siteUrl =
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: { default: 'Skyhook', template: '%s — Skyhook' },
+  title: { default: 'Skyhook', template: '%s | Skyhook' },
   description:
     'The execution layer for CCTP hooks on Stellar, so USDC does something the moment it lands.',
   icons: { icon: '/favicon.png' },
@@ -33,9 +30,8 @@ export default function Layout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="en" className={figtree.className} suppressHydrationWarning>
       <body className="flex flex-col min-h-screen">
-        {/* Light by default: the brand is a light mark, and the palette was chosen against
-            white. The toggle stays, because a documentation site is read for long stretches
-            and that is a reader's call to make, not ours. */}
+        {/* Light by default, since the brand was designed on white. Docs readers can still
+            switch to dark. */}
         <RootProvider theme={{ defaultTheme: 'light' }}>{children}</RootProvider>
       </body>
     </html>

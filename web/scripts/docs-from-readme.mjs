@@ -1,11 +1,9 @@
 // Turns the repository's READMEs into the pages of the documentation site.
 //
-// The READMEs are the source of truth — SOW §5.1 asks for the specification "published in the
-// repository", and a reader who arrives through GitHub must find the whole thing there. This
-// site renders those same files rather than holding a second copy of the words.
+// The READMEs are the source of truth, so readers on GitHub see the same text. The site renders
+// them instead of keeping a second copy.
 //
-// Everything written under content/docs is generated and gitignored. That is the point: two
-// copies of a document drift within weeks, and it is always the stale one that gets read.
+// Everything under content/docs is generated and gitignored, so the two can't drift apart.
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,15 +12,14 @@ const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const repoRoot = path.resolve(webRoot, "..");
 const outDir = path.join(webRoot, "content", "docs");
 
-/** Order here is the order in the sidebar, so it reads as a path rather than a list. */
+/** This order is the sidebar order. */
 const PAGES = [
   {
     slug: "index",
     from: "README.md",
     title: "Skyhook",
     description: "The execution layer for CCTP hooks on Stellar.",
-    // The root README opens with a centred HTML banner and badges, which belong on GitHub
-    // rather than here — the site has its own header.
+    // The root README starts with a banner and badges for GitHub. The site has its own header.
     dropUntil: /^## What this is/m,
   },
   {

@@ -2,9 +2,8 @@
 @import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
 
-/* The brand's two accents, sampled from the logo rather than guessed: the hook is #296FFF, the
-   ball runs #16C65C → #2AD46B, and the banner's field is #343ECE. Blue carries actions, green
-   carries confirmation — the same division the mark itself makes. */
+/* The brand colours, sampled from the logo: the hook is #296FFF, the ball runs #16C65C →
+   #2AD46B, and the banner is #343ECE. Blue is for actions, green for confirmation. */
 :root {
   --brand-blue: #296fff;
   --brand-blue-deep: #343ece;
@@ -14,9 +13,8 @@
 
 /* ─────────────────────────────────────────────────────────────────────────
    The type scale and button utilities from the cruip "Simple" template.
-   Copied rather than approximated: every step carries its own letter-spacing
-   (-0.037em on headings, -0.017em on body), and that tightness is most of
-   what makes the original look drawn rather than defaulted.
+   Copied exactly: each step has its own letter-spacing (-0.037em on
+   headings, -0.017em on body), and that's most of the template's look.
    ───────────────────────────────────────────────────────────────────────── */
 @theme {
   --text-xs: 0.75rem;
@@ -72,12 +70,11 @@ html > body[data-scroll-locked] {
   --removed-body-scroll-bar-size: 0px !important;
 }
 
-/* The template's pill border: a hairline gradient ring drawn with a masked pseudo-element.
+/* The template's pill border: a thin gradient ring drawn with a masked pseudo-element.
  *
- * Written as real CSS rather than Tailwind's `before:[mask-composite:exclude_!important]`.
- * That utility generates the declaration, but the `mask` shorthand that follows resets
- * mask-composite back to `add` — and the ring then fills the whole pill instead of tracing its
- * edge, hiding everything inside it. Ordering the declarations here makes that impossible. */
+ * Plain CSS, not Tailwind's `before:[mask-composite:exclude_!important]`. The `mask` shorthand
+ * resets mask-composite to `add`, and the ring then fills the whole pill and hides its content.
+ * Writing the declarations in order here avoids that. */
 .pill-border::before {
   content: "";
   position: absolute;
@@ -96,10 +93,8 @@ html > body[data-scroll-locked] {
   pointer-events: none;
 }
 
-/* The spinning ring on the Skyhook node, same reasoning as .pill-border: the `mask` shorthand
- * resets mask-composite, so `exclude` has to be declared after it rather than inside a Tailwind
- * arbitrary property. Left as a utility it renders a filled disc over the logo instead of a
- * ring around it. */
+/* The spinning ring on the Skyhook node. Same issue as .pill-border: `exclude` must come after
+ * the `mask` shorthand, or it draws a filled disc over the logo. */
 .ring-spin::before {
   content: "";
   position: absolute;
@@ -119,9 +114,8 @@ html > body[data-scroll-locked] {
   pointer-events: none;
 }
 
-/* The template defines these in its `@theme`; ours never carried them across, so every
- * `animate-[breath_…]` and `animation: line …` on the page referred to a keyframe that did not
- * exist and quietly did nothing. `breath` and `line` are the template's, unchanged. */
+/* Keyframes copied from the template's `@theme`. Without them, `animate-[breath_…]` and
+ * `animation: line …` silently did nothing. */
 @keyframes breath {
   0%,
   100% {
@@ -154,11 +148,9 @@ html > body[data-scroll-locked] {
   }
 }
 
-/* `line` travels out and back, which is right for decoration. The flow diagram is not
- * decoration — it shows USDC moving one way — so the connectors use this instead: a single
- * left-to-right pass occupying the first quarter of the cycle. Give the three connectors delays
- * of 0, T/4 and T/2 and the highlight hands off from one to the next without a gap, arriving at
- * the vault and stopping there. */
+/* `line` goes out and back. The flow diagram shows USDC moving one way, so the connectors use
+ * this: one left-to-right pass in the first quarter of the cycle. With delays of 0, T/4 and T/2
+ * the highlight passes from one connector to the next without a gap. */
 @keyframes sweep {
   0% {
     left: -4rem;
@@ -182,13 +174,10 @@ html > body[data-scroll-locked] {
 
 /* The docs sidebar's social links.
  *
- * Fumadocs draws one bordered box around all of them, and that box stretches the sidebar's full
- * width — 236px of frame around two 30px icons. There is no slot for it, so `:has()` reaches it
- * through the marker class on the X icon, which is the only child of that box we author.
+ * Fumadocs wraps them in one full-width box (236px around two 30px icons). There's no slot for
+ * it, so `:has()` finds it through the class on the X icon.
  *
- * The child combinator in `:has(> a > …)` is load-bearing. Written as `:has(.skyhook-social)`
- * this matches every ancestor div in the sidebar, not the one wrapper, and strips the frame off
- * all of them. */
+ * Keep the `>` in `:has(> a > …)`. Without it, every ancestor div matches and loses its frame. */
 #nd-sidebar div:has(> a > .skyhook-social) {
   border: 0;
   background: transparent;
@@ -203,13 +192,10 @@ html > body[data-scroll-locked] {
   border-radius: var(--radius-lg);
 }
 
-/* The vertical rail's highlight. One pass down the whole column, then a pause.
+/* The vertical rail's highlight: one pass down the column, then a pause.
  *
- * Unlike `sweep` this carries no opacity steps. It does not need them: the rail clips, and the
- * travelling block fades to transparent at both its own ends, so it simply slides out of view.
- * The opacity steps were what made the phone version look broken — each rail dimmed at its
- * bottom before the next lit at its top, and the two fades ran one after the other rather than
- * overlapping, leaving a dark gap at every junction. */
+ * No opacity steps, unlike `sweep`. The rail clips and the block fades at both ends, so it just
+ * slides out of view. Opacity steps are what made the old phone version blink. */
 @keyframes rail-sweep {
   0% {
     top: -4rem;

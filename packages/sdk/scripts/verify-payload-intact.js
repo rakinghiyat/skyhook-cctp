@@ -1,6 +1,5 @@
-// Gate Q3 — is the payload at offset 32+L readable intact after the burn -> attestation
-// round trip? Decodes Circle's returned hookData and checks it byte-for-byte against what
-// gate-burn-2.js originally built.
+// Gate Q3: does the payload at offset 32+L survive burn -> attestation? Compares Circle's
+// returned hookData byte for byte with what gate-burn-2.js built.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { loadEnv, repoRoot } from "./env.js";
@@ -22,8 +21,7 @@ console.log("Expected hookData:", expectedHookData);
 console.log("Returned hookData:", returnedHookData);
 console.log("Exact match:", expectedHookData.toLowerCase() === returnedHookData.toLowerCase());
 
-// Also parse offset 32+L out of the returned bytes directly, independent of buildHookData,
-// as a second, independent check.
+// Also read offset 32+L directly, without buildHookData, as a second check.
 const raw = Buffer.from(returnedHookData.slice(2), "hex");
 const L = raw.readUInt32BE(28);
 const recipient = raw.slice(32, 32 + L).toString("utf8");

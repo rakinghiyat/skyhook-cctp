@@ -1,12 +1,10 @@
 // Reads a raw CCTP v2 message.
 //
-// This exists because Circle's Get Messages endpoint returns **every address field as null** for
-// Stellar messages — `recipient`, `destinationCaller` and `mintRecipient` all come back empty,
-// because the API cannot tell a 32-byte account from a 32-byte contract. The values are present
-// in the raw `message` hex the whole time; they simply have to be read out of it.
+// Circle's API returns every address field as null for Stellar messages, because it can't tell
+// a 32-byte account from a 32-byte contract. The values are still in the raw `message` hex, so
+// we read them from there.
 //
-// The offsets below are the same ones `contracts/skyhook-core/src/parse.rs` uses on-chain,
-// reconstructed and verified field by field against real attested messages.
+// Offsets match `contracts/skyhook-core/src/parse.rs` and were checked against real messages.
 import { StrKey } from "@stellar/stellar-sdk";
 
 const OUTER_HEADER_LEN = 148;
@@ -19,8 +17,7 @@ function u32(buf, at) {
   return buf.readUInt32BE(at);
 }
 
-/** CCTP amounts are uint256; USDC values are far inside Number's safe range, but read the low
- *  128 bits as BigInt rather than assuming. */
+/** CCTP amounts are uint256. Read them as BigInt rather than trusting Number's range. */
 function u256(buf, at) {
   return BigInt("0x" + buf.subarray(at, at + 32).toString("hex"));
 }
@@ -29,7 +26,7 @@ function hex(buf, at, len) {
   return "0x" + buf.subarray(at, at + len).toString("hex");
 }
 
-/** A 32-byte value that is a Stellar contract, rendered as the `C...` strkey it really is. */
+/** A 32-byte contract id as its `C...` strkey. */
 function asContractStrkey(buf, at) {
   try {
     return StrKey.encodeContract(Buffer.from(buf.subarray(at, at + 32)));
@@ -61,7 +58,7 @@ export function parseCctpMessage(messageHex) {
     destinationDomain: u32(buf, 8),
     nonce: hex(buf, 12, 32),
     sender: hex(buf, 44, 32),
-    // Nulled by the API — recovered here.
+    // Null in the API, so read here.
     recipient: hex(buf, 76, 32),
     recipientStrkey: asContractStrkey(buf, 76),
     destinationCaller: hex(buf, 108, 32),
@@ -72,7 +69,7 @@ export function parseCctpMessage(messageHex) {
     body: {
       version: u32(body, 0),
       burnToken: hex(body, 4, 32),
-      // Also nulled by the API.
+      // Also null in the API.
       mintRecipient: hex(body, 36, 32),
       mintRecipientStrkey: asContractStrkey(body, 36),
       amount: u256(body, 68),
@@ -88,8 +85,8 @@ export function parseCctpMessage(messageHex) {
 }
 
 /**
- * Circle's hook frame: 24 magic bytes, a version, the length of `forwardRecipient`, the strkey
- * itself, then whatever the integrator appended — for us, the Skyhook instruction.
+ * Circle's hook frame: 24 magic bytes, a version, the length of `forwardRecipient`, the strkey,
+ * then whatever the integrator appended (for us, the Skyhook instruction).
  */
 export function parseHookData(hookData) {
   if (hookData.length < 32) return null;

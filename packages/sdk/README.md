@@ -1,11 +1,10 @@
 # @skyhook-cctp/sdk
 
-Builds the CCTP burn parameters and the Skyhook instruction that travels with them — and reads
-the same wire format back.
+Builds the CCTP burn parameters and the Skyhook instruction that goes with them, and reads the
+same format back.
 
-A sending application uses this to make USDC *do something* when it reaches Stellar, instead of
-arriving and sitting there. See the [format reference](../../README.md#instruction-format) for
-the bytes this produces.
+A sending app uses this to make USDC *do something* when it reaches Stellar, instead of just
+arriving. See the [format reference](../../README.md#instruction-format) for the exact bytes.
 
 ## Install
 
@@ -13,9 +12,29 @@ the bytes this produces.
 npm install @skyhook-cctp/sdk
 ```
 
+## Before you start
+
+Two things the SDK cannot get for you.
+
+**USDC on the source chain.** Arc Testnet uses USDC as its native gas token, so a single balance
+covers both the amount you burn and the fee it costs to burn it — there is no second token to
+fund. Get it from [Circle's faucet](https://faucet.circle.com): choose *Arc Testnet*, paste your
+address, and it sends 20 USDC. One request per asset and network every two hours. No account is
+needed, but there is a reCAPTCHA, so it cannot be scripted into your setup.
+
+> Some ISPs DNS-hijack `faucet.circle.com` to a national block page. It surfaces as a **TLS
+> certificate error** rather than anything that says "blocked", so it reads as a broken site
+> rather than a filtered one. The block is DNS-only: resolving through 1.1.1.1, 8.8.8.8 or
+> 9.9.9.9 reaches the real host.
+
+**A funded Stellar account** for whoever submits the execution, because the relayer pays the
+Soroban fee. On Testnet [friendbot](https://friendbot.stellar.org) funds one immediately. Leave
+room: an invocation against contracts that have gone cold pays to restore them from archive and
+has cost over 1.2 XLM, against roughly 0.002 XLM when they are warm.
+
 ## The shortest path
 
-A transfer that deposits into a SEP-56 vault on arrival, in three steps.
+A transfer that deposits into a SEP-56 vault on arrival.
 
 ### 1. Build the instruction
 
@@ -33,11 +52,11 @@ const instruction = buildInstruction(RECIPIENT, 1, depositParams(VAULT));
 const hookData = toHex(buildHookData(SKYHOOK_CORE, instruction));
 ```
 
-`buildInstruction` and `depositParams` both reject anything that is not a 56-byte strkey. That
-is deliberate: an `L` field that does not describe the strkey exactly is rejected by Circle's
-forwarder, and a malformed envelope is the one failure mode whose funds cannot be recovered.
+`buildInstruction` and `depositParams` reject anything that isn't a 56-byte strkey. Circle's
+forwarder rejects a wrong `L`, and a broken envelope is the one failure where funds can't be
+recovered.
 
-To hold for a recipient rather than deposit, use handler `2` with no params:
+To hold for a recipient instead of depositing, use handler `2` with no params:
 
 ```js
 const instruction = buildInstruction(RECIPIENT, 2);
@@ -45,10 +64,10 @@ const instruction = buildInstruction(RECIPIENT, 2);
 
 ### 2. Burn on the source chain
 
-Two parameters decide whether the transfer arrives or is lost forever. Circle warns that a wrong
-`destinationCaller`, or a `mintRecipient` pointing at anything other than the forwarder contract,
-makes funds **permanently stuck and unrecoverable**. `buildBurnParameters` assembles the call and
-refuses both, before anything is signed:
+Two parameters decide whether the transfer arrives or is lost for good. Circle warns that a wrong
+`destinationCaller`, or a `mintRecipient` that isn't the forwarder contract, leaves funds
+**permanently stuck**. `buildBurnParameters` builds the call and refuses both before anything is
+signed:
 
 ```js
 import { buildBurnParameters } from "@skyhook-cctp/sdk";
@@ -69,73 +88,67 @@ await walletClient.writeContract({
 });
 ```
 
-`mintRecipient` and `destinationCaller` both default to `forwarder`, which is the only correct
-value for either — you do not pass them. They are still *accepted*, so that a wrong one is caught
-rather than impossible to express, and the error names the mistake:
+`mintRecipient` and `destinationCaller` default to `forwarder`, the only correct value, so you
+don't pass them. You still *can*, so a wrong value gets a clear error:
 
 ```
 mintRecipient is Skyhook's own address. It belongs in forwardRecipient, inside the hook
-data — the mint always goes to CctpForwarder (CA66Q2WF…), which then forwards.
+data. The mint always goes to CctpForwarder (CA66Q2WF…), which then forwards.
 ```
 
-That is the mistake worth guarding against, because it is the reasonable one: naming the contract
-that should act on the funds, on the assumption that this is how you route them there. It is not.
-Skyhook's address goes in `forwardRecipient` inside the hook data; the mint always goes to the
+That's the easy mistake: naming Skyhook because it's the contract that acts on the funds.
+Skyhook's address goes in `forwardRecipient` inside the hook data. The mint always goes to the
 forwarder.
 
-Why this is checked here rather than handled later: once the burn is signed, its nonce is spent. A
-message that cannot be delivered cannot be retried, refunded or rebuilt, so before signing is the
-only moment any of this can be caught.
+Why check this up front? Once the burn is signed its nonce is spent, and a message that can't be
+delivered can't be retried or refunded. Before signing is the only chance.
 
-Prefer to build the call yourself? `burn` also carries each parameter by name — `amount`,
+Want to build the call yourself? `burn` also has each parameter by name (`amount`,
 `destinationDomain`, `mintRecipient`, `burnToken`, `destinationCaller`, `maxFee`,
-`minFinalityThreshold`, `hookData` — with the addresses already `bytes32`-encoded.
+`minFinalityThreshold`, `hookData`), with addresses already `bytes32`-encoded.
 
 ### 3. Relay it
 
-Nothing executes the instruction until someone submits it — the forwarder credits rather than
-invokes. Run the [relayer](../relayer/README.md) against the burn:
+The instruction doesn't run until someone submits it, because the forwarder only credits. Run
+the [relayer](../relayer/README.md) on the burn:
 
 ```bash
 node packages/relayer/src/cli.js <burnTxHash>
 ```
 
-It waits for Circle's attestation, then calls `Skyhook.execute`. Running one is permissionless
-and takes no custody; you can run your own or rely on any other operator.
+It waits for Circle's attestation, then calls `Skyhook.execute`. Anyone can run a relayer and it
+never holds funds, so you can run your own or use someone else's.
 
-The recipient ends up holding vault shares. **No USDC trustline is required** — shares live in
-the vault's own storage, so Deposit reaches recipients that a plain USDC payout cannot.
+The recipient ends up with vault shares. **No USDC trustline is needed**, because shares live in
+the vault's storage. So Deposit can reach recipients a plain USDC payout can't.
 
 ### 4. Confirm it landed
 
-The relayer prints a transaction hash, but the honest check is the recipient's position, read
-back from the vault itself:
+The relayer prints a transaction hash, but the real check is the recipient's balance in the vault:
 
 ```bash
 stellar contract invoke --id <vault> --source <any-funded-account> \
   --network testnet --send=no -- balance --account <recipient>
 ```
 
-It should have risen by the delivered amount, at Stellar's 7 decimals — 1 USDC burned arrives as
-`10000000`. Because vault shares are a Soroban token rather than a classic asset, a wallet will
-not list them until the vault's contract id is added as a custom token; the balance above is
-there either way.
+It should go up by the delivered amount at 7 decimals, so 1 USDC burned shows up as `10000000`.
+Vault shares are a Soroban token, not a classic asset, so a wallet won't list them until you add
+the vault's contract id as a custom token. The balance is there either way.
 
-If the instruction fell back to Hold instead, the amount is waiting under the recipient's name:
+If the instruction fell back to Hold, the amount is waiting under the recipient's name:
 
 ```bash
 stellar contract invoke --id <handler-hold> --source <any-funded-account> \
   --network testnet --send=no -- held --recipient <recipient>
 ```
 
-Both calls are read-only (`--send=no`), cost nothing, and can be run by anyone — you do not need
-the recipient's key to look.
+Both calls are read-only (`--send=no`), free, and anyone can run them. You don't need the
+recipient's key.
 
 ## Reading a message back
 
-Circle's Get Messages endpoint returns **every address field as `null`** for Stellar messages —
-the API cannot tell a 32-byte account from a 32-byte contract. The values are in the raw message
-the whole time:
+Circle's API returns **every address field as `null`** for Stellar messages, because it can't
+tell an account from a contract. The values are still in the raw message:
 
 ```js
 import { parseCctpMessage, isFinalized } from "@skyhook-cctp/sdk";
@@ -155,40 +168,40 @@ isFinalized(parsed);              // false means it may need re-attestation
 | Export | Purpose |
 |---|---|
 | `buildInstruction(recipient, handlerId, params?)` | The Skyhook instruction envelope |
-| `depositParams(vault)` | Deposit's `params` — the vault address |
-| `buildBurnParameters({ … })` | The `depositForBurnWithHook` call, with the unrecoverable addresses refused |
+| `depositParams(vault)` | Deposit's `params`: the vault address |
+| `buildBurnParameters({ … })` | The `depositForBurnWithHook` call, refusing unrecoverable addresses |
 | `buildHookData(forwardRecipient, payload?)` | Circle's hook frame around an instruction |
-| `parseCctpMessage(hex)` | A raw CCTP message, fields and all |
+| `parseCctpMessage(hex)` | A raw CCTP message, all fields |
 | `parseHookData(bytes)` | Just the hook frame |
 | `isFinalized(parsed)` | Whether the attestation reached finality |
 | `toHex(bytes)` | `0x`-prefixed hex |
 
 ## What happens when something goes wrong
 
-Your instruction does not have to be perfect for the funds to be safe — but it does decide how
-recoverable they are.
+Your instruction doesn't have to be perfect for the funds to be safe, but it decides how easy
+they are to recover.
 
 | If | Then |
 |---|---|
-| The vault address is not a vault, or is for another asset | The handler refuses before collecting; funds route to Hold, claimable by `fallback_recipient` |
-| `handler_id` is not registered | Straight to Hold |
-| `params_len` disagrees with the bytes present | Straight to Hold |
-| The envelope is shorter than 57 bytes, or `fallback_recipient` is not a valid strkey | **The funds become unrecoverable.** No recipient can be read, so they are recorded against the CCTP nonce, and nobody can prove a nonce is theirs |
+| The vault address isn't a vault, or is for another asset | The handler refuses before collecting; funds go to Hold, claimable by `fallback_recipient` |
+| `handler_id` isn't registered | Straight to Hold |
+| `params_len` doesn't match the bytes | Straight to Hold |
+| The envelope is under 57 bytes, or `fallback_recipient` isn't a valid strkey | **The funds can't be recovered.** No recipient can be read, so they're recorded by CCTP nonce, and nobody can prove a nonce is theirs |
 
-The last row is why this library validates strkeys instead of trusting the caller. Build the
-envelope with `buildInstruction` and it cannot happen.
+That last row is why this library validates strkeys. Build the envelope with `buildInstruction`
+and it can't happen.
 
 ## Networks
 
-Testnet only for now. The addresses above are Stellar Testnet, paired with Arc Testnet
-(CCTP domain 26) as the source chain.
+Testnet only for now. The addresses above are on Stellar Testnet, with Arc Testnet (CCTP domain
+26) as the source chain.
 
 ## Development
 
 ```bash
-npm install          # from the repo root — workspaces wire the packages together
+npm install          # from the repo root; workspaces wire the packages together
 npm test --workspace @skyhook-cctp/sdk
 ```
 
-Tests run against real attested messages captured from Testnet, so the parser is checked against
-the wire rather than against a fixture someone wrote to match it.
+Tests use real messages captured from Testnet, so the parser is checked against real data, not a
+fixture written to match it.

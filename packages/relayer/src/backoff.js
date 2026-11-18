@@ -1,12 +1,11 @@
 // Exponential backoff with a ceiling.
 //
-// Circle rate-limits the attestation API (40 requests/second across all callers), and an
-// attestation takes anywhere from seconds to minutes depending on the source chain's finality.
-// Hammering it at a fixed interval is both rude and, under rate limiting, counterproductive.
+// Circle rate-limits the attestation API (40 requests/second for everyone), and an attestation
+// can take seconds or minutes. Polling at a fixed fast rate just gets us rate-limited.
 
 /**
- * Delays for successive attempts: `base`, doubling each time, capped at `ceiling`.
- * Pure and synchronous so the schedule can be asserted in tests rather than observed by waiting.
+ * Delays for each attempt: `base`, doubling each time, capped at `ceiling`.
+ * Pure, so tests can check the schedule without waiting.
  */
 export function backoffSchedule({ base = 2000, ceiling = 30000, attempts = 20 } = {}) {
   const out = [];
@@ -18,7 +17,7 @@ export function backoffSchedule({ base = 2000, ceiling = 30000, attempts = 20 } 
   return out;
 }
 
-/** Total wall-clock time a full schedule would spend waiting, in milliseconds. */
+/** Total time a full schedule waits, in milliseconds. */
 export function scheduleDuration(schedule) {
   return schedule.reduce((a, b) => a + b, 0);
 }

@@ -8,8 +8,8 @@ use soroban_sdk::{contract, contractimpl, token, Address, Bytes, Env, String};
 const DELIVERED: i128 = 10_000_000;
 
 // ---------------------------------------------------------------------------------------
-// A stand-in for skyhook-core: authorizes exactly one pull, then invokes the handler. Mirrors
-// `try_run` in contracts/skyhook-core/src/lib.rs.
+// Fake skyhook-core: authorizes one pull, then calls the handler, like `try_run` in
+// contracts/skyhook-core/src/lib.rs.
 // ---------------------------------------------------------------------------------------
 
 #[contract]
@@ -45,7 +45,7 @@ impl MockCore {
     }
 }
 
-/// Stands in for a contract that is not a vault at all.
+/// A contract that isn't a vault.
 #[contract]
 pub struct NotAVault;
 
@@ -79,8 +79,7 @@ impl Rig {
 
         let handler = env.register(HandlerDeposit, (&core, &token));
 
-        // The real reference vault, not a mock — testing against a stub would only prove the
-        // handler can talk to a stub.
+        // The real reference vault, not a mock. A stub would only prove we can talk to a stub.
         let vault = env.register(
             ReferenceVault,
             (
@@ -106,7 +105,7 @@ impl Rig {
         self.env.set_auths(&[]);
     }
 
-    /// The vault's address as the 56-byte strkey the instruction carries (SPEC.md §3).
+    /// The vault address as the 56-byte strkey the instruction carries.
     fn params_for(&self, vault: &Address) -> Bytes {
         let s = vault.to_string();
         let mut buf = [0u8; 56];
@@ -155,11 +154,9 @@ fn deposit_credits_the_recipient_with_shares() {
     assert_eq!(rig.usdc(&rig.recipient), 0, "the recipient is paid in shares, not USDC");
 }
 
-// Not tested here: that the recipient needs no USDC trustline to be credited. The test
-// environment gives out contract addresses, which never need trustlines in the first place, so
-// any test of it would pass vacuously. It is a property of where the balance lives — shares sit
-// in the vault's own storage — and the honest place to demonstrate it is on Testnet with a real
-// G-address. See docs/EVIDENCE.md §4.
+// Not tested here: that the recipient needs no USDC trustline. Test addresses are contracts,
+// which never need one, so the test would pass for nothing. It was shown on Testnet with a real
+// G-address instead.
 
 #[test]
 fn repeated_deposits_accumulate_shares() {
@@ -192,9 +189,8 @@ fn a_params_naming_something_that_is_not_a_vault_fails() {
     assert_eq!(rig.shares(&rig.recipient), 0);
 }
 
-/// A real, working vault — for the wrong asset. Before the handler checked `query_asset`, this
-/// deposit would have gone through: the vault would have taken the USDC and minted the recipient
-/// shares denominated in a different asset entirely.
+/// A working vault for the wrong asset. Before the `query_asset` check, this deposit went
+/// through and minted shares in a different asset.
 #[test]
 fn a_vault_for_a_different_asset_is_refused() {
     let rig = Rig::new();

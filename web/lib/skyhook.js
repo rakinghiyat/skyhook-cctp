@@ -1,6 +1,5 @@
-// Where Skyhook lives. Testnet contract addresses, not secrets — they are printed in the README
-// and resolve on stellar.expert. The sponsor's key is the only secret involved, and it stays in
-// the server route under /api.
+// Where Skyhook lives. These Testnet addresses aren't secret; they're in the README. The only
+// secret is the sponsor's key, which stays in the /api route.
 export const CONFIG = {
   network: "TESTNET",
   networkPassphrase: "Test SDF Network ; September 2015",
@@ -17,7 +16,7 @@ export const CONFIG = {
   contractUrl: (id) => `https://stellar.expert/explorer/testnet/contract/${id}`,
 };
 
-/** Stellar amounts carry 7 decimals; show them as people read them. */
+/** Stellar amounts have 7 decimals. Format them for people. */
 export function formatUsdc(raw) {
   const n = BigInt(raw);
   const whole = n / 10_000_000n;

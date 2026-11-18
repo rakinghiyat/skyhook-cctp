@@ -1,9 +1,7 @@
 // Submits Skyhook.execute(message, attestation) to Stellar.
 //
-// The relayer takes no custody of anything: it never holds the USDC being transferred, and its
-// only cost is the fee for this one invocation, paid from its own account. That is what makes
-// running one permissionless — Skyhook depends on the role existing, not on any particular
-// operator.
+// The relayer never holds the USDC. It only pays the fee for this call from its own account,
+// so anyone can run one. Skyhook needs someone to relay, not a specific operator.
 import {
   Keypair,
   TransactionBuilder,
@@ -64,22 +62,18 @@ export async function submitExecute({
   }
   log(`  submitted ${sent.hash}, waiting for confirmation`);
 
-  // Confirmation comes from Horizon rather than the RPC's getTransaction, for two reasons
-  // learned by running this for real:
+  // We confirm through Horizon, not the RPC's getTransaction, for two reasons:
   //
-  //   - getTransaction parses the transaction meta as XDR, and an SDK older than the network's
-  //     protocol fails with "Bad union switch" on a transaction that in fact succeeded.
-  //   - it can block far longer than any deadline checked between calls, so a hung call cannot
-  //     be interrupted by a timeout the loop enforces itself.
+  //   - getTransaction parses XDR meta, and an older SDK fails with "Bad union switch" on a
+  //     transaction that actually succeeded.
+  //   - it can hang past our timeout.
   //
-  // Horizon returns plain JSON with a `successful` flag, and a 404 simply means "not yet".
-  // Reporting a successful transaction as failed is the worst outcome available here — an
-  // operator would resubmit something that already landed — so this path is deliberately the
-  // boring one.
+  // Horizon returns plain JSON with a `successful` flag; 404 means "not yet". Calling a success
+  // a failure is the worst case here, since an operator would resubmit.
   const confirmed = await confirmViaHorizon({ horizonUrl, hash: sent.hash, log });
   if (!confirmed) {
     throw new Error(
-      `submitted ${sent.hash} but could not confirm it within the timeout — check ` +
+      `submitted ${sent.hash} but could not confirm it within the timeout. Check ` +
         `https://stellar.expert/explorer/testnet/tx/${sent.hash} before resubmitting, ` +
         `it may well have succeeded`
     );
@@ -105,7 +99,7 @@ async function confirmViaHorizon({ horizonUrl, hash, timeoutMs = 90_000, log }) 
       // 404 means Horizon has not ingested it yet.
     } catch (err) {
       if (err.message?.includes("failed on-chain")) throw err;
-      // Network hiccup — keep waiting rather than declaring failure.
+      // Network hiccup, keep waiting.
     }
     await new Promise((r) => setTimeout(r, 2000));
   }
@@ -113,11 +107,9 @@ async function confirmViaHorizon({ horizonUrl, hash, timeoutMs = 90_000, log }) 
 }
 
 /**
- * Turns a contract error code into something that says what to do about it.
+ * Turns a contract error code into advice.
  *
- * A raw `Error(Contract, #6908)` buried in a page of XDR tells an operator nothing, and the
- * commonest case — relaying a burn that already landed — is not a fault at all. Naming it is
- * the difference between "something broke" and "this is already done".
+ * The most common one, #6908, just means the burn was already relayed. That's not a failure.
  */
 function explainSimulationError(raw) {
   const text = String(raw);
@@ -126,7 +118,7 @@ function explainSimulationError(raw) {
   // From circlefin/stellar-cctp, message-transmitter-v2: NonceAlreadyUsed = 6908.
   if (code === "6908") {
     return (
-      "this burn has already been relayed — CCTP refuses to process the same message twice " +
+      "this burn has already been relayed. CCTP won't process the same message twice " +
       "(NonceAlreadyUsed). Nothing is wrong and nothing needs resubmitting; check the recipient's " +
       "balance to see the result of the run that succeeded."
     );

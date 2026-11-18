@@ -1,14 +1,11 @@
-// Week 1 gate — baseline CCTP transfer (SOW §5.1 Days 1-2, EVIDENCE.md §2 row 1).
+// Week 1 gate: a baseline CCTP transfer.
 //
-// Burns USDC on Arc Testnet via depositForBurnWithHook, with forwardRecipient in the hook
-// data set to the relayer's own Stellar account (a plain G-address, no contract logic) —
-// this baseline only proves burn -> attestation -> mint_and_forward works at all. It does
-// NOT yet test cross-contract callability (gate Q2/Q3) — that needs the skyhook-core probe,
-// a separate step.
+// Burns USDC on Arc Testnet with forwardRecipient set to the relayer's own G-address. It only
+// proves burn -> attestation -> mint_and_forward works. Calling from a contract is tested
+// separately in gate-burn-2.js.
 //
-// ABI for depositForBurnWithHook confirmed against the verified TokenMessengerV2
-// implementation on testnet.arcscan.app (0xF07C0ad13178a9ef5c3fFA0Be69e0BECd452Bf6D), not
-// assumed from documentation.
+// The depositForBurnWithHook ABI was checked against the verified TokenMessengerV2 on
+// testnet.arcscan.app (0xF07C0ad13178a9ef5c3fFA0Be69e0BECd452Bf6D).
 import { createWalletClient, createPublicClient, http, parseAbi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { StrKey } from "@stellar/stellar-sdk";
@@ -46,7 +43,7 @@ function strkeyToBytes32(strkey) {
 }
 
 async function main() {
-  const amount = 1_000_000n; // 1 USDC at 6 decimals — small, deliberate gate amount
+  const amount = 1_000_000n; // 1 USDC at 6 decimals, kept small on purpose
   const maxFee = 500n;
   const minFinalityThreshold = 1000; // "fast" transfer, matching Circle's own quickstart example
   const destinationDomain = 27; // Stellar

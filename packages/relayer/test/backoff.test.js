@@ -10,8 +10,7 @@ test("delays double until they hit the ceiling, then hold there", () => {
 
 test("the default schedule waits long enough to be useful without running forever", () => {
   const total = scheduleDuration(backoffSchedule());
-  // Circle's attestations have arrived in seconds in practice, but finality on a slow source
-  // chain can take minutes. Minutes of patience, not hours of hanging.
+  // Attestations usually take seconds, but a slow chain can take minutes. Wait minutes, not hours.
   assert.ok(total > 5 * 60_000, `expected over 5 minutes of patience, got ${total}ms`);
   assert.ok(total < 30 * 60_000, `expected under 30 minutes, got ${total}ms`);
 });

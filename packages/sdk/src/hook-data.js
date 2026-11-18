@@ -1,9 +1,9 @@
-// Builds Circle's CCTP hook data frame for Stellar, per docs/SPEC.md §1:
-//   bytes  0-23   magic — zero
-//   bytes 24-27   version (uint32 BE) — 0
-//   bytes 28-31   L — byte length of forwardRecipient (uint32 BE)
+// Builds Circle's CCTP hook data frame for Stellar:
+//   bytes  0-23   magic, all zero
+//   bytes 24-27   version (uint32 BE), 0
+//   bytes 28-31   L, byte length of forwardRecipient (uint32 BE)
 //   bytes 32..    forwardRecipient as a Stellar strkey (UTF-8)
-//   bytes 32+L..  optional integrator-defined payload (omitted for the gate baseline test)
+//   bytes 32+L..  optional integrator payload (the Skyhook instruction)
 export function buildHookData(forwardRecipientStrkey, extraPayload = new Uint8Array(0)) {
   const recipientBytes = new TextEncoder().encode(forwardRecipientStrkey);
   const L = recipientBytes.length;

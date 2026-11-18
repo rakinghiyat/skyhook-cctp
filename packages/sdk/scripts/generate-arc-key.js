@@ -1,6 +1,5 @@
-// Generates a fresh EVM private key for the Arc Testnet gate wallet and writes it directly
-// into the repo's .env — never prints the private key. Prints only the public address, which
-// is what needs funding via the faucet.
+// Makes a new EVM key for the Arc Testnet wallet and writes it into .env. It never prints the
+// private key, only the address to fund from the faucet.
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -14,10 +13,10 @@ const account = privateKeyToAccount(privateKey);
 
 let env = readFileSync(envPath, "utf8");
 if (!/^SOURCE_PRIVATE_KEY=$/m.test(env)) {
-  throw new Error("SOURCE_PRIVATE_KEY= (empty) not found in .env — refusing to guess where to write it");
+  throw new Error("SOURCE_PRIVATE_KEY= (empty) not found in .env. Not guessing where to write it.");
 }
 env = env.replace(/^SOURCE_PRIVATE_KEY=$/m, `SOURCE_PRIVATE_KEY=${privateKey}`);
 writeFileSync(envPath, env);
 
 console.log(`Arc Testnet wallet address (fund this via faucet): ${account.address}`);
-console.log("Private key written to .env — not printed here.");
+console.log("Private key written to .env (not printed here).");

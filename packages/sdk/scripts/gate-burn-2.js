@@ -1,5 +1,5 @@
-// Gate Q2/Q3/Q4 — burn with forwardRecipient = the deployed skyhook-core probe contract,
-// plus a trailing test payload, so we can check after the fact whether:
+// Gate Q2/Q3/Q4: burn with forwardRecipient set to the skyhook-core probe contract, plus a
+// test payload, to check whether:
 //   Q2/Q4: mint_and_forward can be called from another contract, and funds land there
 //   Q3:    the trailing payload survives the burn -> attestation round trip intact
 import { createWalletClient, createPublicClient, http, parseAbi } from "viem";
@@ -42,7 +42,7 @@ async function main() {
 
   const forwarderBytes32 = strkeyToBytes32(env.CCTP_FORWARDER_ID);
   const testPayload = new TextEncoder().encode("SKYHOOK-GATE-TEST-Q3-PAYLOAD-INTACT-CHECK");
-  // forwardRecipient = skyhook-core probe contract, NOT the relayer G-address this time.
+  // forwardRecipient is the probe contract this time, not the relayer's G-address.
   const hookData = toHex(buildHookData(env.SKYHOOK_CORE_ID, testPayload));
 
   console.log("Burning from:", account.address);

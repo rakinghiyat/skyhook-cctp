@@ -12,8 +12,8 @@ const MINTED: i128 = 10_000_000;
 // Mocks
 // ---------------------------------------------------------------------------------------
 
-/// Stands in for Circle's `CctpForwarder`: hands its pre-funded USDC to a target on
-/// `mint_and_forward`, the same way the real one credits `forwardRecipient`.
+/// Fake `CctpForwarder`. On `mint_and_forward` it sends its pre-funded USDC to the target,
+/// like the real one credits `forwardRecipient`.
 #[contract]
 pub struct MockForwarder;
 
@@ -38,8 +38,8 @@ impl MockForwarder {
     }
 }
 
-/// Pulls the funds the core authorized it for, and keeps them. A handler knows its core and
-/// token at construction (SPEC.md §4), which is what lets `execute` keep its published shape.
+/// Pulls the authorized funds and keeps them. The core and token are set at construction, so
+/// `execute` keeps its published signature.
 #[contract]
 pub struct HandlerOk;
 
@@ -55,8 +55,8 @@ impl HandlerOk {
     }
 }
 
-/// Pulls the funds and *then* rejects. Panicking is the legitimate way to refuse (SPEC.md §4);
-/// pulling first is what makes this a real test of the rollback boundary.
+/// Pulls the funds, then panics. Panicking is how a handler refuses, and pulling first is what
+/// tests the rollback.
 #[contract]
 pub struct HandlerPanics;
 
@@ -92,9 +92,8 @@ struct Rig {
 }
 
 impl Rig {
-    /// Auth is mocked only while wiring the rig up. Every test then calls `arm()` to switch
-    /// mocking off, so the core's scoped authorization of each handler pull is genuinely
-    /// exercised rather than waved through.
+    /// Auth is mocked only during setup. Each test calls `arm()` to turn it off, so the core's
+    /// real authorization of each pull gets tested.
     fn new() -> Rig {
         let env = Env::default();
         env.mock_all_auths();
@@ -117,7 +116,7 @@ impl Rig {
         }
     }
 
-    /// Disables auth mocking. Anything after this must stand on its own authorization.
+    /// Turns off auth mocking. After this, every call needs real authorization.
     fn arm(&self) {
         self.env.set_auths(&[]);
     }
@@ -150,8 +149,8 @@ impl Rig {
             .execute(&message, &Bytes::new(&self.env));
     }
 
-    /// The invariant, asserted after every scenario: nothing was destroyed. Every unit the
-    /// forwarder handed over is still accounted for somewhere.
+    /// The invariant, checked after every scenario: every unit the forwarder sent is still
+    /// somewhere.
     fn assert_nothing_lost(&self, holders: &[&Address]) {
         let mut total = self.balance(&self.forwarder) + self.balance(&self.core);
         for h in holders {
@@ -165,7 +164,7 @@ impl Rig {
 }
 
 // ---------------------------------------------------------------------------------------
-// Level 1 — the named handler succeeds
+// Level 1: the named handler succeeds
 // ---------------------------------------------------------------------------------------
 
 #[test]
@@ -183,7 +182,7 @@ fn level_1_named_handler_receives_the_funds() {
 }
 
 // ---------------------------------------------------------------------------------------
-// Level 2 — fall through to Hold
+// Level 2: fall through to Hold
 // ---------------------------------------------------------------------------------------
 
 #[test]
@@ -197,8 +196,7 @@ fn level_2_failing_handler_routes_to_hold_and_rolls_back_its_transfer() {
 
     rig.execute_naming(1);
 
-    // The whole point of having the handler pull inside its own invocation: the transfer it
-    // made must roll back along with its frame, not stay stranded there.
+    // This is why the handler pulls inside its own call: its transfer rolls back with it.
     assert_eq!(
         rig.balance(&failing),
         0,
@@ -241,7 +239,7 @@ fn level_2_malformed_instruction_routes_to_hold() {
 }
 
 // ---------------------------------------------------------------------------------------
-// Level 3 — nothing could take the funds, so they stay here
+// Level 3: nothing could take the funds, so they stay here
 // ---------------------------------------------------------------------------------------
 
 #[test]
@@ -275,7 +273,7 @@ fn level_3_no_handlers_registered_at_all() {
     let rig = Rig::new();
     rig.arm();
 
-    // Nothing registered, not even Hold — the ladder has nowhere to go.
+    // Nothing registered, not even Hold, so the ladder has nowhere to go.
     rig.execute_naming(1);
 
     assert_eq!(rig.balance(&rig.core), MINTED);
@@ -290,7 +288,7 @@ fn level_3_unrecoverable_recipient_records_against_nonce() {
     rig.register(HOLD_HANDLER_ID, &hold);
     rig.arm();
 
-    // Too short to yield even a fallback_recipient, so Hold cannot be told who to credit.
+    // Too short to read a recipient, so Hold can't be told who to credit.
     let envelope = std::vec![0x01u8; 10];
     let message = fixtures::message(&rig.env, &rig.core, &envelope);
     rig.client().execute(&message, &Bytes::new(&rig.env));
@@ -316,7 +314,7 @@ fn level_3_emits_unresolved_event() {
     rig.arm();
     rig.execute_naming(1);
 
-    // A caught failure that left no trace is indistinguishable from one that never happened.
+    // A caught failure needs an event, or nobody would know it happened.
     let expected = Unresolved {
         recipient: Some(rig.recipient.clone()),
         amount: MINTED,
@@ -392,17 +390,15 @@ fn recovery_with_nothing_stranded_is_rejected() {
     assert!(result.is_err());
 }
 
-/// Pins down the known limitation rather than leaving it implicit: when an instruction was too
-/// malformed to yield a recipient, the funds are keyed by CCTP nonce and *nobody* can recover
-/// them. Recovering them would require an authority to decide who is entitled — the admin key
-/// this contract is built not to have. If this test ever starts failing, that trade-off has
-/// been changed and needs a deliberate decision.
+/// Known limitation: funds keyed by nonce can't be recovered by anyone, because deciding who
+/// owns them would need an admin. If this test starts failing, that trade-off was changed and
+/// needs a deliberate decision.
 #[test]
 fn nonce_keyed_funds_are_unrecoverable_by_design() {
     let rig = Rig::new();
     rig.arm();
 
-    // Too short to yield a fallback_recipient at all.
+    // Too short to read a recipient.
     let envelope = std::vec![0x01u8; 10];
     let message = fixtures::message(&rig.env, &rig.core, &envelope);
     rig.client().execute(&message, &Bytes::new(&rig.env));
@@ -414,7 +410,7 @@ fn nonce_keyed_funds_are_unrecoverable_by_design() {
         "the funds are recorded, just not attributable"
     );
 
-    // No recipient was ever recorded, so there is no one for the recovery path to pay.
+    // No recipient was recorded, so there is nobody to pay.
     rig.env.mock_all_auths();
     let result = rig
         .client()
@@ -427,7 +423,7 @@ fn nonce_keyed_funds_are_unrecoverable_by_design() {
 // Authorization is scoped to exactly one pull
 // ---------------------------------------------------------------------------------------
 
-/// Tries to take more than the core authorized it for.
+/// Tries to take more than it was authorized for.
 #[contract]
 pub struct HandlerGreedy;
 
@@ -446,8 +442,8 @@ impl HandlerGreedy {
 #[test]
 fn handler_cannot_pull_more_than_it_was_authorized_for() {
     let rig = Rig::new();
-    // Extra funds sitting in the core, of the kind a previous Level-3 fallback would leave —
-    // a greedy handler must not be able to reach them.
+    // Leftover funds in the core, like an earlier Level 3 would leave. A greedy handler must
+    // not reach them.
     token::StellarAssetClient::new(&rig.env, &rig.token).mint(&rig.core, &MINTED);
 
     let greedy = rig.env.register(HandlerGreedy, (&rig.core, &rig.token));
@@ -463,7 +459,7 @@ fn handler_cannot_pull_more_than_it_was_authorized_for() {
         0,
         "the authorization covers one exact transfer; anything more must fail"
     );
-    // Overreaching is just another handler failure, so the ladder carries on to Hold.
+    // Overreaching is just a handler failure, so the ladder moves on to Hold.
     assert_eq!(rig.balance(&hold), MINTED);
     assert_eq!(rig.balance(&rig.core), MINTED, "the pre-existing funds stay put");
 }

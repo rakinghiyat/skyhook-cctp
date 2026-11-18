@@ -1,7 +1,6 @@
 #![cfg(test)]
-// Shared builders for realistic CCTP messages, used by both the parser's own unit tests and
-// the contract-level ladder tests. Sizes and offsets mirror the verified layout documented in
-// parse.rs.
+// Builds realistic CCTP messages for the parser tests and the ladder tests. Sizes and
+// offsets match parse.rs.
 use soroban_sdk::{Address, Bytes, BytesN, Env};
 use std::string::ToString;
 use std::vec::Vec;
@@ -10,8 +9,7 @@ pub const OUTER_HEADER_LEN: usize = 148;
 pub const BODY_FIXED_LEN: usize = 228;
 const NONCE_OFFSET: usize = 12;
 
-/// A distinctive nonce written into every fixture message, so tests can assert that Level-3
-/// fallback keyed the funds against the right one.
+/// A recognizable nonce in every fixture, so tests can check Level 3 used the right one.
 pub const TEST_NONCE: [u8; 32] = [0xAB; 32];
 
 pub fn test_nonce(env: &Env) -> BytesN<32> {
@@ -40,8 +38,8 @@ pub fn hook_frame(forward_recipient: &Address, trailing: &[u8]) -> Vec<u8> {
     hook
 }
 
-/// A full raw CCTP message carrying `hook` as its hookData. The outer header and messageBody
-/// fixed fields are zeroed apart from the nonce — nothing else in them is read.
+/// A full CCTP message with `hook` as its hookData. Header fields are zero except the nonce,
+/// since nothing else there is read.
 pub fn message_with_hook(env: &Env, hook: &[u8]) -> Bytes {
     let mut msg = std::vec![0u8; OUTER_HEADER_LEN + BODY_FIXED_LEN];
     msg[NONCE_OFFSET..NONCE_OFFSET + 32].copy_from_slice(&TEST_NONCE);

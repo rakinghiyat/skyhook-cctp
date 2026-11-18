@@ -1,7 +1,6 @@
 import Link from 'next/link';
 
-// The full lockup in one asset: the hook and the wordmark as the brand draws them together,
-// rather than two images placed side by side and hoped into alignment.
+// The full lockup as one image, so the hook and wordmark always line up.
 export default function Logo() {
   return (
     <Link href="/" className="inline-flex shrink-0" aria-label="Skyhook">

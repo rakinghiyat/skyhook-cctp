@@ -8,19 +8,16 @@ use soroban_sdk::{
     Symbol,
 };
 
-// The Deposit handler (SPEC.md §3, `handler_id = 1`).
+// The Deposit handler (`handler_id = 1`).
 //
-// Places arriving USDC into a SEP-56 vault for the recipient, in the same execution that
-// delivered it. This is the handler that makes the project's actual claim true: USDC crossing
-// over CCTP goes to work on arrival instead of waiting for a second transaction.
+// Deposits arriving USDC into a SEP-56 vault for the recipient, in the same transaction that
+// delivered it. So USDC from CCTP starts working on arrival, with no second transaction.
 //
-// It targets the **SEP-56 interface**, never one particular vault. The vault's address travels
-// in the instruction, so any conforming vault works without changing this contract — the
-// reference vault in this workspace is for testing and the demo, not a hardcoded destination.
+// It works with any SEP-56 vault. The vault address comes in the instruction; the reference
+// vault in this workspace is only for tests and the demo.
 //
-// Worth noting about who can receive: the recipient is credited with vault *shares*, which live
-// in the vault's own storage. Unlike a USDC payout, that needs no trustline — so Deposit can
-// reach recipients that Hold's `claim` cannot.
+// The recipient gets vault shares, which live in the vault's storage. That needs no trustline,
+// so Deposit can reach recipients that Hold's `claim` can't.
 
 const CORE: Symbol = symbol_short!("CORE");
 const TOKEN: Symbol = symbol_short!("TOKEN");
@@ -43,23 +40,20 @@ pub struct HandlerDeposit;
 
 #[contractimpl]
 impl HandlerDeposit {
-    /// Both set once at deploy time and immutable thereafter. `core` is the only contract this
-    /// handler will ever collect funds from.
+    /// Both are set once and never change. `core` is the only contract this handler pulls from.
     pub fn __constructor(env: Env, core: Address, token: Address) {
         env.storage().instance().set(&CORE, &core);
         env.storage().instance().set(&TOKEN, &token);
     }
 
-    /// Called by the core. Collects the funds it authorized, then deposits them into the vault
-    /// named in `params`, with the shares going to `recipient`.
+    /// Called by the core. Pulls the authorized funds and deposits them into the vault named in
+    /// `params`, with shares going to `recipient`.
     ///
-    /// Panicking is how a handler refuses (SPEC.md §4): if `params` is malformed, or the named
-    /// address is not a vault, or the deposit reverts for any reason, this call fails and the
-    /// core routes the funds to Hold instead. Nothing needs to be caught here.
+    /// A handler refuses by panicking. Bad `params`, a non-vault address or a failed deposit
+    /// all panic, and the core sends the funds to Hold instead.
     ///
-    /// No "only the core may call this" check is needed: the collection below is
-    /// `transfer(core, self, amount)` for the `core` fixed at construction, so it can only
-    /// succeed inside an invocation that particular core authorized.
+    /// No caller check is needed. The pull is `transfer(core, self, amount)` from our own core,
+    /// so it only works when that core authorized it.
     pub fn execute(env: Env, recipient: Address, amount: i128, params: Bytes) {
         let vault = vault_from_params(&params);
 
@@ -67,18 +61,11 @@ impl HandlerDeposit {
         let token: Address = env.storage().instance().get(&TOKEN).unwrap();
         let me = env.current_contract_address();
 
-        // Check the destination before touching the funds (SPEC.md §4, "validate before you
-        // collect"). Two things are settled here at once:
+        // Check the vault before touching the funds. A contract without `query_asset` isn't a
+        // vault, and a vault for another asset would mint the wrong shares.
         //
-        //   - Something with no `query_asset` is not a SEP-56 vault, and the call traps.
-        //   - A vault whose underlying asset is not what we were handed would take this USDC
-        //     and mint shares denominated in something else. Refusing is the correct answer,
-        //     not a nicety.
-        //
-        // Doing this first also keeps a rejection cheap. The fallback ladder runs inside one
-        // invocation with a finite budget, and work done before failing is still charged for;
-        // a handler that collects funds and only then discovers the destination is wrong can
-        // exhaust the budget and take the whole transaction down. See ARCHITECTURE.md §4.
+        // Checking first also keeps a refusal cheap. The whole ladder shares one budget, so a
+        // handler that pulls funds and only then fails can use it up and revert everything.
         let vault_asset: Address = env.invoke_contract(
             &vault,
             &Symbol::new(&env, "query_asset"),
@@ -91,9 +78,8 @@ impl HandlerDeposit {
         // Collect what the core authorized.
         token::TokenClient::new(&env, &token).transfer(&core, &me, &amount);
 
-        // The vault will move the assets out of us from inside its own frame — a deeper call
-        // than ours, so it needs explicit authorization. Scoped to this exact transfer, the
-        // same way the core scopes what it authorizes us to take.
+        // The vault pulls the funds from us in a deeper call, so it needs explicit auth. It
+        // covers only this transfer, like the core does for us.
         env.authorize_as_current_contract(vec![
             &env,
             InvokerContractAuthEntry::Contract(SubContractInvocation {
@@ -106,9 +92,8 @@ impl HandlerDeposit {
             }),
         ]);
 
-        // SEP-56: deposit(assets, receiver, from, operator) -> shares. Passing `from` and
-        // `operator` as ourselves keeps the vault on its direct-transfer path rather than
-        // requiring an allowance.
+        // SEP-56: deposit(assets, receiver, from, operator) -> shares. Using ourselves for
+        // `from` and `operator` means no allowance is needed.
         let shares: i128 = env.invoke_contract(
             &vault,
             &Symbol::new(&env, "deposit"),
@@ -125,9 +110,8 @@ impl HandlerDeposit {
     }
 }
 
-/// `params` is the vault address as a 56-byte strkey (SPEC.md §3). Anything else is a
-/// malformed instruction, and panicking is the correct response — the core catches it and the
-/// funds go to Hold rather than to an address we cannot verify.
+/// `params` is the vault address as a 56-byte strkey. Anything else panics, and the core sends
+/// the funds to Hold.
 fn vault_from_params(params: &Bytes) -> Address {
     if params.len() != VAULT_STRKEY_LEN {
         panic!("params must be a 56-byte vault strkey");

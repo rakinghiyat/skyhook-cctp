@@ -1,17 +1,14 @@
 import PageIllustration from '@/components/page-illustration';
 
-// The hero: the template's frame and rhythm — `max-w-6xl`, `pb-12 pt-32 md:pb-20 md:pt-40`,
-// the same button treatment — without the gradient rules the template draws above and below
-// each block. Those hairlines are the template's own accent and read as clutter here, where the
-// headline has to do all the work on its own.
+// The hero: the template's frame and spacing (`max-w-6xl`, `pb-12 pt-32 md:pb-20 md:pt-40`) and
+// buttons, without its gradient lines, which looked cluttered here.
 export default function Hero() {
   return (
     <section className="relative">
       <PageIllustration />
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="flex min-h-svh flex-col justify-center pb-40 pt-32 text-center md:pb-60 md:pt-40">
-          {/* The dot does the work: green for the brand, and it pulses because the point of the
-              line is that this is running right now, not that it is planned. */}
+          {/* Green for the brand, and it pulses to say this is live now. */}
           <div className="mb-6" data-aos="zoom-y-out">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3.5 py-1.5 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-200/80 backdrop-blur-sm">
               <span className="relative flex size-2">

@@ -4,11 +4,10 @@ import { fetchJson } from "./http.js";
 import { backoffSchedule } from "./backoff.js";
 
 /**
- * Polls Circle for the attestation of a burn, backing off between attempts.
+ * Polls Circle for a burn's attestation, backing off between attempts.
  *
- * Returns the attested message, or throws once the schedule is exhausted. Every attempt is
- * logged with the delay that preceded it, so a transcript shows the backoff actually widening
- * rather than merely claiming to.
+ * Returns the attested message, or throws when the schedule runs out. Each attempt logs its
+ * delay, so the log shows the backoff growing.
  */
 export async function awaitAttestation({ api, sourceDomain, burnTxHash, log, wait = sleep }) {
   const url = `${api}/v2/messages/${sourceDomain}?transactionHash=${burnTxHash}`;
@@ -24,7 +23,7 @@ export async function awaitAttestation({ api, sourceDomain, burnTxHash, log, wai
     if (message?.status === "complete") return message;
 
     if (status === 429) {
-      log(`  rate limited by Circle — backing off is the correct response, not retrying harder`);
+      log(`  rate limited by Circle, backing off`);
     }
 
     log(`  waiting ${delay}ms before the next attempt`);
@@ -34,11 +33,9 @@ export async function awaitAttestation({ api, sourceDomain, burnTxHash, log, wai
 }
 
 /**
- * Asks Circle to re-attest a pre-finality message at finalized level.
+ * Asks Circle to re-attest a message at finalized level.
  *
- * Only meaningful for a message that was attested below finality — a fast transfer whose
- * attestation expired before anyone used it. A finalized message needs nothing, and asking anyway
- * would be noise.
+ * Only needed for a fast transfer whose attestation expired before anyone used it.
  */
 export async function requestReattestation({ api, nonce, log }) {
   const url = `${api}/v2/reattest/${nonce}`;
@@ -51,9 +48,8 @@ export async function requestReattestation({ api, nonce, log }) {
 /**
  * Reads the message ourselves and reports what the API left out.
  *
- * This is the whole reason the relayer parses raw hex: Circle's Get Messages endpoint returns
- * every address field as null for Stellar, because it cannot tell a 32-byte account from a
- * 32-byte contract. The values were in the message the entire time.
+ * Circle's API returns every address field as null for Stellar, because it can't tell an
+ * account from a contract. The values are in the raw message, so we read them there.
  */
 export function reportRawHexParse(message, log) {
   const parsed = parseCctpMessage(message.message);
@@ -72,7 +68,7 @@ export function reportRawHexParse(message, log) {
       log(`  mintRecipient as a Stellar address: ${parsed.body.mintRecipientStrkey}`);
     }
   } else {
-    log(`Circle's API returned every address field populated — nothing to recover`);
+    log(`Circle's API returned every address field, nothing to recover`);
   }
 
   log(`route: domain ${parsed.sourceDomain} -> ${parsed.destinationDomain}`);

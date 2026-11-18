@@ -8,9 +8,8 @@ import { parseCctpMessage, isFinalized } from "../src/index.js";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const captured = path.join(here, "..", "scripts", ".gate-attestation-2-result.json");
 
-// These fixtures are real attested messages captured from Testnet, kept out of git as scratch
-// output. Skip rather than fail when they are absent — a fresh clone has none, and the point of
-// this test is fidelity to real wire data, which a synthetic fixture could not provide.
+// The fixtures are real Testnet messages, kept out of git. Skip when they're missing, since a
+// fresh clone has none and a fake fixture would defeat the point.
 const skip = existsSync(captured)
   ? false
   : "no captured attestation available (run a burn first)";
@@ -20,18 +19,17 @@ test("recovers the addresses Circle's API returns as null", { skip }, () => {
   const api = fixture.decodedMessage;
   const parsed = parseCctpMessage(fixture.message);
 
-  // The precondition for this whole parser existing: the API really does null these out.
+  // The reason this parser exists: the API really returns these as null.
   assert.equal(api.recipient, null, "fixture should show the API nulling recipient");
   assert.equal(api.destinationCaller, null);
   assert.equal(api.decodedMessageBody.mintRecipient, null);
 
-  // And the raw hex really does carry them.
+  // And the raw hex does have them.
   assert.match(parsed.recipient, /^0x[0-9a-f]{64}$/);
   assert.match(parsed.destinationCaller, /^0x[0-9a-f]{64}$/);
   assert.match(parsed.body.mintRecipient, /^0x[0-9a-f]{64}$/);
 
-  // mintRecipient is always the CctpForwarder contract for a Stellar-bound transfer, so it must
-  // render as a valid C-address.
+  // mintRecipient is always CctpForwarder for Stellar, so it must be a valid C-address.
   assert.match(parsed.body.mintRecipientStrkey, /^C[A-Z0-9]{55}$/);
 });
 

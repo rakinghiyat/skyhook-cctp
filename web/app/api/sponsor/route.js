@@ -1,16 +1,14 @@
 // The sponsor: pays the fee for a claim someone else signed.
 //
-// A fee bump has to be signed by the account paying, and that key cannot go in the browser where
-// anyone can read it. So the page builds and the recipient signs; this route wraps and submits.
+// The paying account signs the fee bump, and its key can't be in the browser. So the page builds
+// the transaction, the recipient signs, and this route wraps and submits it.
 //
-// It is deliberately incurious about everything except one thing: that what it is being asked to
-// pay for is a `claim` on our Hold handler, already signed. Without that check it would be a free
-// fee-payer for any transaction anyone cared to send it.
+// It only checks one thing: the transaction is a signed `claim` on our Hold handler. Without that
+// it would pay for anything.
 //
-// What it does NOT do, by the SOW's own exclusion: key rotation, rate limiting, anti-abuse. It
-// holds a single Testnet key. Someone determined could drain it — but only by making genuine CCTP
-// transfers to themselves first, which costs them more than it costs us, and friendbot refills
-// it. That trade is acceptable on Testnet and would not be on mainnet.
+// No key rotation, rate limiting or anti-abuse (out of scope in the SOW). It's one Testnet key.
+// Draining it means making real CCTP transfers first, which costs more than it saves, and
+// friendbot refills it. Fine on Testnet, not on mainnet.
 import { feeBumpAndSubmit } from "@skyhook-cctp/sdk";
 
 export async function POST(request) {
@@ -19,7 +17,7 @@ export async function POST(request) {
   const sponsorSecret = process.env.SPONSOR_SECRET_KEY;
 
   if (!sponsorSecret || !holdId) {
-    // Misconfiguration, not the caller's fault — name which variables so it is fixable.
+    // Our misconfiguration, not the caller's. Name the missing variables.
     return Response.json(
       { error: "No sponsor is configured here (SPONSOR_SECRET_KEY, HANDLER_HOLD_ID)" },
       { status: 503 }
@@ -40,8 +38,7 @@ export async function POST(request) {
     });
     return Response.json(result);
   } catch (e) {
-    // A refusal here is usually the guard doing its job, so the reason is worth returning rather
-    // than flattening into "bad request".
+    // A refusal is usually the guard working, so return the reason, not just "bad request".
     return Response.json({ error: e.message }, { status: 400 });
   }
 }

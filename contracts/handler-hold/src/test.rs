@@ -8,8 +8,8 @@ use soroban_sdk::{contract, contractimpl, token, vec, Address, Bytes, Env, Event
 const HELD_AMOUNT: i128 = 10_000_000;
 
 // ---------------------------------------------------------------------------------------
-// A stand-in for skyhook-core: authorizes exactly one pull, then invokes the handler. Mirrors
-// `try_run` in contracts/skyhook-core/src/lib.rs.
+// Fake skyhook-core: authorizes one pull, then calls the handler, like `try_run` in
+// contracts/skyhook-core/src/lib.rs.
 // ---------------------------------------------------------------------------------------
 
 #[contract]
@@ -58,9 +58,8 @@ struct Rig {
 }
 
 impl Rig {
-    /// Auth is mocked only while wiring up; every test then calls `arm()` so the real
-    /// authorization paths — the core's scoped pull, and the recipient's own signature on
-    /// claim — are genuinely exercised.
+    /// Auth is mocked only during setup. Each test calls `arm()`, so the core's pull and the
+    /// recipient's claim signature are really checked.
     fn new() -> Rig {
         let env = Env::default();
         env.mock_all_auths();
@@ -138,7 +137,7 @@ fn repeated_deliveries_accumulate() {
 #[test]
 fn execute_from_an_unauthorized_caller_records_nothing() {
     let rig = Rig::new();
-    // A second "core" the handler was never constructed against, funded and willing to try.
+    // A different "core" the handler doesn't know, funded and willing to try.
     let impostor = rig.env.register(MockCore, (&rig.token,));
     token::StellarAssetClient::new(&rig.env, &rig.token).mint(&impostor, &HELD_AMOUNT);
     rig.arm();
@@ -167,8 +166,8 @@ fn claim_pays_the_recipient_in_full() {
     rig.env.mock_all_auths(); // stands in for the recipient's signature
     rig.client().claim(&rig.recipient);
 
-    // Read the events before anything else: `events().all()` only reports the most recent
-    // invocation, and every balance check below is itself an invocation.
+    // Read events first. `events().all()` only shows the latest call, and each balance check
+    // below is a call.
     let expected = Claimed {
         recipient: rig.recipient.clone(),
         to: rig.recipient.clone(),
@@ -191,7 +190,7 @@ fn claim_without_the_recipients_authorization_fails() {
     rig.arm();
     rig.deliver();
 
-    // No auth supplied — nobody signed for the recipient.
+    // No auth: nobody signed for the recipient.
     let result = rig.client().try_claim(&rig.recipient);
 
     assert!(result.is_err(), "funds must not move without the recipient's say-so");
@@ -252,7 +251,7 @@ fn claim_to_still_requires_the_recipients_authorization() {
     rig.arm();
     rig.deliver();
 
-    // Anyone could name a destination; only the recipient can authorize the move.
+    // Anyone can name a destination, but only the recipient can authorize it.
     let result = rig
         .client()
         .try_claim_to(&rig.recipient, &attacker_destination);

@@ -2,13 +2,11 @@
 // The claim page.
 //
 // SOW D3: "a Freighter-connected page where a recipient claims held funds and signs without
-// holding XLM." Freighter has since been renamed Varial — the same wallet, so the same page.
+// holding XLM." Freighter is now called Varial, same wallet.
 //
-// The recipient signs; a sponsor pays. Two signatures from two different places, and the split is
-// what makes the arrangement safe — the sponsor's envelope cannot alter the transaction it wraps,
-// so covering someone's fee grants no authority over their money. The page shows the recipient's
-// XLM balance either side of the claim, because the promise is about what they did *not* spend,
-// and that is worth demonstrating rather than asserting.
+// The recipient signs and a sponsor pays. The sponsor's fee bump can't change the transaction
+// inside it, so paying the fee gives no power over the money. The page shows the XLM balance
+// before and after, to prove the recipient spent none.
 import { useState } from "react";
 import { buildClaimTransaction, heldAmount, explainClaimError } from "@skyhook-cctp/sdk";
 import { CONFIG, formatUsdc } from "@/lib/skyhook";
@@ -108,8 +106,8 @@ export default function ClaimPage() {
       <h1 className="text-3xl font-semibold tracking-tight">Claim what is held for you</h1>
       <p className="mt-3 text-lg leading-relaxed text-gray-600">
         When USDC arrives for someone who cannot yet receive it, Skyhook holds it rather than
-        letting the transfer fail. This is where you collect it — and the fee is paid for you, so
-        you need no XLM of your own.
+        letting the transfer fail. This is where you collect it. The fee is paid for you, so you
+        need no XLM of your own.
       </p>
 
       {!address && (
@@ -135,7 +133,7 @@ export default function ClaimPage() {
 
           {held === 0n && !result && (
             <p className="mt-4 text-sm text-gray-600">
-              Nothing is waiting for this address. That is the ordinary case — funds only appear
+              Nothing is waiting for this address. That is the ordinary case: funds only appear
               here when a transfer arrived while you could not receive it.
             </p>
           )}
@@ -172,7 +170,7 @@ export default function ClaimPage() {
           {/trustline/i.test(error) && (
             <p className="mt-3 text-sm text-gray-600">
               A Stellar account has to opt in to each asset it holds. Add USDC in Varial, then
-              claim again — the held balance stays exactly where it is until you do.
+              claim again. The held balance stays exactly where it is until you do.
             </p>
           )}
         </div>
@@ -210,8 +208,8 @@ export default function ClaimPage() {
           </dl>
           <p className="mt-4 text-sm text-gray-600">
             You authorized the transfer; someone else paid for it. The sponsor could not have
-            altered where the money went — changing a single byte would have invalidated your
-            signature.
+            altered where the money went, because changing a single byte would have invalidated
+            your signature.
           </p>
         </div>
       )}

@@ -13,9 +13,8 @@ import {
 } from "@stellar/stellar-sdk";
 import { assertIsClaimOn, explainClaimError } from "../src/index.js";
 
-// A sponsor endpoint that fee-bumps whatever it is handed is a free fee-payer for the whole
-// network. These tests pin the guard that stops that, and they are built offline so they check
-// the logic rather than the state of a testnet.
+// A sponsor that fee-bumps anything pays for the whole network. These tests check the guard
+// against that. They run offline, so they test the logic, not Testnet.
 const HOLD = "CCLVTDVGYHSWFC7AW2L327WMFZVKZDFYY24G7Z4IZO2SQDM4DVWE7TC6";
 const OTHER = "CCOMST7FEDLYJ5MXZTVKVKMK43AQP2U2AZEZRHE3XHYO6UF6LKC2654F";
 const WHO = "GAQBGO4CX33NSYXHGMVRAMPQVC427H7LQFOCTTOZNBEQOB5LC5GKX3JF";
@@ -40,7 +39,7 @@ test("accepts a claim on the expected Hold handler", () => {
 });
 
 test("refuses a claim aimed at a different contract", () => {
-  // The dangerous shape: a well-formed `claim`, just not ours.
+  // The dangerous case: a valid `claim`, but not on our contract.
   assert.throws(() => assertIsClaimOn(txCalling(OTHER, "claim"), HOLD), /not the Hold handler/);
 });
 
@@ -60,8 +59,7 @@ test("refuses a plain payment", () => {
 });
 
 test("refuses a transaction carrying more than one operation", () => {
-  // Otherwise a real claim could be smuggled alongside anything else, and the sponsor would
-  // pay for both.
+  // Otherwise a real claim could carry something else along, and the sponsor would pay for both.
   const tx = new TransactionBuilder(new Account(WHO, "1"), {
     fee: BASE_FEE,
     networkPassphrase: Networks.TESTNET,
@@ -76,6 +74,6 @@ test("refuses a transaction carrying more than one operation", () => {
 test("names the failures a recipient will actually hit", () => {
   assert.match(explainClaimError("HostError: Error(Contract, #13)"), /trustline/i);
   assert.match(explainClaimError("HostError: Error(Contract, #6908)"), /already claimed/i);
-  // Anything unrecognised is passed through rather than mislabelled.
+  // Unknown errors pass through unchanged.
   assert.equal(explainClaimError("something else entirely"), "something else entirely");
 });

@@ -1,19 +1,13 @@
-// Sponsored claim from the command line — the recipient signs, the sponsor pays.
+// Sponsored claim from the command line: the recipient signs, the sponsor pays.
 //
-// SOW D2: "claim() runs inside a fee-bump transaction, so the recipient needs no XLM."
+// The Hold contract only needs the recipient's signature. The fee is paid outside the contract
+// by wrapping the signed transaction in a fee bump, so a sponsor gets no power over the funds.
 //
-// Nothing in `handler-hold` knows about this. `claim(recipient)` requires the recipient's
-// authorization and nothing else; who pays the fee is decided outside the contract entirely, by
-// wrapping the recipient's signed transaction in a fee-bump envelope. That separation is the
-// point: an application that wants to spare its users the cost of receiving can do so without
-// Skyhook granting it any authority over their funds.
+// The logic is in `../src/claim.js`, shared with the claim page. This is the CLI for it.
 //
-// The logic lives in `../src/claim.js`, shared with the claim page and the serverless function
-// behind it, so the three cannot drift apart. This file is the terminal-shaped front for it.
-//
-//   build         — print the transaction for the recipient to sign in their wallet
-//   submit        — take the signed envelope back, fee-bump it, send it
-//   submit-parts  — same, when the wallet hands back a bare signature instead of an envelope
+//   build         print the transaction for the recipient to sign
+//   submit        take the signed envelope, fee-bump it, send it
+//   submit-parts  same, when the wallet returns a bare signature instead of an envelope
 //
 // Usage:
 //   node scripts/sponsored-claim.js build
@@ -43,7 +37,7 @@ async function build() {
   const { xdr: unsigned, fee } = await buildClaimTransaction({ ...shared, recipient: RECIPIENT });
   console.log(`recipient : ${RECIPIENT}`);
   console.log(`held      : ${held} (7 decimals)`);
-  console.log(`inner fee : ${fee} stroops — the sponsor covers this, not the recipient`);
+  console.log(`inner fee : ${fee} stroops (paid by the sponsor, not the recipient)`);
   console.log(`\n--- sign this XDR in your wallet, do NOT submit ---\n`);
   console.log(unsigned);
 }
@@ -63,12 +57,10 @@ async function send(signedXdr) {
 }
 
 /**
- * Reassembles an envelope from the pieces some signing interfaces hand back — a signature and
- * its hint rather than a re-serialised transaction.
+ * Rebuilds an envelope from a bare signature and hint, which some signing tools return.
  *
- * The signature is verified against the transaction's own hash first. A stale signature is the
- * likeliest mistake here: re-simulating changes the fee, which changes the hash, which quietly
- * invalidates a signature that still looks perfectly well-formed.
+ * The signature is checked against the hash first. Re-simulating changes the fee and the hash,
+ * so a stale signature is the likely mistake and still looks valid.
  */
 async function submitParts(unsignedXdr, sigHex, hintHex) {
   const inner = TransactionBuilder.fromXDR(unsignedXdr, NETWORK);
@@ -76,7 +68,7 @@ async function submitParts(unsignedXdr, sigHex, hintHex) {
 
   if (!Keypair.fromPublicKey(RECIPIENT).verify(inner.hash(), signature)) {
     throw new Error(
-      "the signature does not match this transaction — it was signed over a different version. " +
+      "the signature does not match this transaction. It was signed over a different version. " +
         "Re-simulating changes the fee, and the fee is part of what gets signed."
     );
   }

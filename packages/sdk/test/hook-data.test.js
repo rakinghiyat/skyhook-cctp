@@ -2,16 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { buildHookData, parseHookData } from "../src/index.js";
 
-// Circle's own validator is unforgiving about the L field, and these tests pin our side of that
-// contract. Verified against circlefin/stellar-cctp: `validate_hook_data` slices exactly
-// `32..32+L` and hands those bytes to `MuxedAddress::from_string_bytes`, so an L that does not
-// cover the strkey exactly yields either a truncated string or an empty one, and the parse
-// fails. Circle's `test_validate_hook_data_rejects_invalid` covers zero-length claims, lengths
-// exceeding the data, and a strkey one byte short.
+// Circle's validator is strict about L. In circlefin/stellar-cctp, `validate_hook_data` reads
+// exactly `32..32+L` as the strkey, so a wrong L breaks the parse.
 //
-// Our builder derives L from the encoded bytes rather than assuming a constant, which is what
-// keeps it correct for G, C and M addresses alike. These tests exist so a future refactor cannot
-// quietly replace that with a hardcoded 56.
+// Our builder computes L from the encoded bytes, which works for G, C and M addresses. These
+// tests stop a refactor from hardcoding 56.
 
 const C_ADDRESS = "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE";
 const G_ADDRESS = "GA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQHES5";
@@ -34,8 +29,7 @@ test("L is the actual byte length of the strkey, for every address type", () => 
 });
 
 test("a C-address is a valid forwardRecipient", () => {
-  // Skyhook is a contract, so this is the case the whole design depends on. Circle's
-  // `test_validate_hook_data_strkey_types` covers C, G and M as equals.
+  // Skyhook is a contract, so this is the case that matters. Circle accepts C, G and M alike.
   const hook = buildHookData(C_ADDRESS);
   const parsed = parseHookData(Buffer.from(hook));
   assert.equal(parsed.forwardRecipient, C_ADDRESS);
@@ -48,8 +42,8 @@ test("the version field is 0, the only value Circle accepts", () => {
 });
 
 test("the magic bytes are left zeroed", () => {
-  // Circle ignores bytes 0-23 entirely — both all-zero and its own "cctp-forward" marker parse.
-  // We write zeroes, which is the documented way to opt out of Circle's own forwarding.
+  // Circle ignores bytes 0-23, so zeroes and its "cctp-forward" marker both parse. We write
+  // zeroes, the documented way to opt out of Circle's own forwarding.
   const hook = buildHookData(C_ADDRESS);
   assert.ok(hook.subarray(0, 24).every((b) => b === 0));
 });

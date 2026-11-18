@@ -5,17 +5,13 @@ import { useTheme } from 'next-themes';
 import { Moon, Sun } from 'lucide-react';
 
 /**
- * One icon, one tap. The icon shows the theme you would *get*, not the one you are in: a moon
- * while the page is light, a sun while it is dark. Fumadocs' own `ThemeSwitch` is a segmented
- * control of two or three buttons, which is more chrome than a phone header has room for.
+ * One icon, one tap. It shows the theme you'd switch to: a moon on light, a sun on dark.
+ * Fumadocs' `ThemeSwitch` is too wide for a phone header.
  *
- * `next-themes` holds the state — it is what Fumadocs' `RootProvider` uses underneath, so reading
- * it here keeps this button and the docs in agreement rather than fighting over the class on
- * `<html>`. It is declared in `package.json` rather than borrowed from Fumadocs' own tree, so a
- * future Fumadocs release cannot quietly take it away.
+ * State comes from `next-themes`, the same library Fumadocs uses, so the two stay in sync. It's
+ * declared in `package.json` so a Fumadocs update can't remove it.
  *
- * Nothing is rendered until mounted. The server cannot know the theme, so an icon chosen before
- * hydration is a coin flip and React would report the mismatch.
+ * Renders nothing until mounted, because the server can't know the theme.
  */
 export default function ThemeToggle({ className = '' }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme();
