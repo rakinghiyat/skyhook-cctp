@@ -2,25 +2,22 @@
 # Run this yourself, once, after `stellar keys generate relayer/sponsor` have been created.
 # Writes RELAYER_SECRET_KEY / SPONSOR_SECRET_KEY into .env. Secrets never pass through Claude.
 #
-# Refuses to replace a funded key in .env with an unfunded one from the keystore, and prints
-# the public keys it wrote. Both guards exist because the silent version of this script is a
-# trap that arms itself at the worst moment: the relayer's own error message recommends running
-# it, which is exactly when RELAYER_SECRET_KEY is missing. The resulting failure arrives at
-# submission time and reads as a relayer bug rather than a configuration one. See
-# docs/EVIDENCE.md §9.
+# Won't replace a funded key in .env with an unfunded one, and prints the public keys it wrote.
+# The relayer's error message tells you to run this, and a silent swap used to show up later
+# as what looked like a relayer bug.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 HORIZON=$(grep -E '^STELLAR_HORIZON_URL=' .env | cut -d= -f2- | tr -d '"')
 HORIZON=${HORIZON:-https://horizon-testnet.stellar.org}
 
-# funded <G...> — true when Horizon knows the account
+# funded <G...>: true when Horizon knows the account
 funded() {
   [ -n "${1:-}" ] || return 1
   [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$HORIZON/accounts/$1")" = "200" ]
 }
 
-# check <ROLE> <keystore-name> — refuse a funded -> unfunded swap
+# check <ROLE> <keystore-name>: refuse a funded -> unfunded swap
 check() {
   local role=$1 name=$2 current new
   current=$(grep -E "^${role}_PUBLIC_KEY=" .env | cut -d= -f2-)
