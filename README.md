@@ -1,7 +1,8 @@
 <div align="center">
   <img src=".github/banner.png" alt="Skyhook: CCTP hooks on Stellar" width="100%">
   <p>The execution layer for <a href="https://developers.circle.com/cctp">CCTP</a> hooks on <a href="https://stellar.org">Stellar</a>, so USDC does something the moment it lands.</p>
-  <a href="https://www.npmjs.com/package/@skyhook-cctp/sdk"><img src="https://img.shields.io/npm/v/@skyhook-cctp/sdk.svg?color=296FFF" alt="npm"></a>
+  <a href="https://www.npmjs.com/package/@skyhook-cctp/sdk"><img src="https://img.shields.io/npm/v/@skyhook-cctp/sdk.svg?color=296FFF&label=sdk" alt="npm: sdk"></a>
+  <a href="https://www.npmjs.com/package/@skyhook-cctp/relayer"><img src="https://img.shields.io/npm/v/@skyhook-cctp/relayer.svg?color=296FFF&label=relayer" alt="npm: relayer"></a>
   <img src="https://img.shields.io/badge/Circle-CCTP%20v2-16C65C.svg" alt="Circle CCTP v2">
   <img src="https://img.shields.io/badge/Soroban-Rust-858585.svg" alt="Soroban / Rust">
   <img src="https://img.shields.io/badge/network-Stellar%20Testnet-7093B5.svg" alt="Stellar Testnet">
@@ -22,13 +23,25 @@ Skyhook reads that field and runs the instruction inside it. Arriving USDC can g
 a SEP-56 vault, or wait safely on-chain if the recipient can't receive it yet, instead of the
 transfer reverting.
 
+## Install
+
+Both halves are on npm; neither needs a clone.
+
+```bash
+npm install @skyhook-cctp/sdk            # build the instruction and the burn
+npx @skyhook-cctp/relayer <burnTxHash>   # carry one burn through to execution
+```
+
+Then follow the [integration guide](packages/sdk/README.md), which starts with what you need
+to have before the first line of code.
+
 ## Where to go next
 
 | If you want to | Read |
 |---|---|
-| Send USDC that does something on arrival | [Integration guide](packages/sdk/README.md) |
+| Send USDC that does something on arrival | [Integration guide](packages/sdk/README.md) — `@skyhook-cctp/sdk` |
 | Write a new handler | [Handler authoring](contracts/skyhook-core/README.md) |
-| Run a relayer | [Relayer](packages/relayer/README.md) |
+| Run a relayer | [Relayer](packages/relayer/README.md) — `@skyhook-cctp/relayer` |
 | Understand the format itself | [Instruction format](#instruction-format) below |
 
 ## How it works

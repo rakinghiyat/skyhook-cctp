@@ -17,7 +17,7 @@ npm install @skyhook-cctp/sdk
 Two things the SDK cannot get for you.
 
 **USDC on the source chain.** Arc Testnet uses USDC as its native gas token, so a single balance
-covers both the amount you burn and the fee it costs to burn it — there is no second token to
+covers both the amount you burn and the fee it costs to burn it. There is no second token to
 fund. Get it from [Circle's faucet](https://faucet.circle.com): choose *Arc Testnet*, paste your
 address, and it sends 20 USDC. One request per asset and network every two hours. No account is
 needed, but there is a reCAPTCHA, so it cannot be scripted into your setup.
@@ -113,8 +113,10 @@ The instruction doesn't run until someone submits it, because the forwarder only
 the [relayer](../relayer/README.md) on the burn:
 
 ```bash
-node packages/relayer/src/cli.js <burnTxHash>
+npx @skyhook-cctp/relayer <burnTxHash>
 ```
+
+From a clone of the repository instead, `node packages/relayer/src/cli.js <burnTxHash>`.
 
 It waits for Circle's attestation, then calls `Skyhook.execute`. Anyone can run a relayer and it
 never holds funds, so you can run your own or use someone else's.
