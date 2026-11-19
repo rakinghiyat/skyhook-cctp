@@ -201,8 +201,14 @@ Both calls are read-only (`--send=no`), free, and anyone can run them. You don't
 recipient's key.
 
 Run them next to the relayer's `.env` and the Stellar CLI reads `STELLAR_RPC_URL` from it, then
-asks for a network passphrase. Either add `--network-passphrase "Test SDF Network ; September
-2015"`, or run them from another directory.
+asks for a network passphrase. Simplest fix is to put it in the same `.env`:
+
+```bash
+STELLAR_NETWORK_PASSPHRASE="Test SDF Network ; September 2015"
+```
+
+The relayer ignores it, so nothing else changes. Otherwise pass `--network-passphrase "Test SDF
+Network ; September 2015"` on each call, or run them from another directory.
 
 ## Reading a message back
 

@@ -39,9 +39,9 @@ to have before the first line of code.
 
 | If you want to | Read |
 |---|---|
-| Send USDC that does something on arrival | [Integration guide](packages/sdk/README.md) — `@skyhook-cctp/sdk` |
+| Send USDC that does something on arrival | [Integration guide](packages/sdk/README.md), `@skyhook-cctp/sdk` |
 | Write a new handler | [Handler authoring](contracts/skyhook-core/README.md) |
-| Run a relayer | [Relayer](packages/relayer/README.md) — `@skyhook-cctp/relayer` |
+| Run a relayer | [Relayer](packages/relayer/README.md), `@skyhook-cctp/relayer` |
 | Understand the format itself | [Instruction format](#instruction-format) below |
 
 ## How it works
@@ -158,10 +158,17 @@ another instruction fails.
 | `handler-deposit` (id 1) | [`CBZOKXZKKORG4FI5URPJMX3XHBDU6E7EXPD4YY36R36PHVOMEKWXRVFY`](https://stellar.expert/explorer/testnet/contract/CBZOKXZKKORG4FI5URPJMX3XHBDU6E7EXPD4YY36R36PHVOMEKWXRVFY) |
 | `handler-hold` (id 2) | [`CCLVTDVGYHSWFC7AW2L327WMFZVKZDFYY24G7Z4IZO2SQDM4DVWE7TC6`](https://stellar.expert/explorer/testnet/contract/CCLVTDVGYHSWFC7AW2L327WMFZVKZDFYY24G7Z4IZO2SQDM4DVWE7TC6) |
 | Reference SEP-56 vault | [`CAY6UNOOWATJW2LXFGMTO6NKLJRVWRKMNVZVPGLKRBLE5Y6OFMDF7IB4`](https://stellar.expert/explorer/testnet/contract/CAY6UNOOWATJW2LXFGMTO6NKLJRVWRKMNVZVPGLKRBLE5Y6OFMDF7IB4) |
+| USDC (the token itself) | [`CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`](https://stellar.expert/explorer/testnet/contract/CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA) |
+| `CctpForwarder` (Circle's) | [`CA66Q2WFBND6V4UEB7RD4SAXSVIWMD6RA4X3U32ELVFGXV5PJK4T4VSZ`](https://stellar.expert/explorer/testnet/contract/CA66Q2WFBND6V4UEB7RD4SAXSVIWMD6RA4X3U32ELVFGXV5PJK4T4VSZ) |
 
 The vault is our own deployment of OpenZeppelin's audited Fungible Token Vault. The Deposit
 handler works with **any SEP-56 vault**, not just this one, because the vault address comes in
 the instruction.
+
+The last two are not ours. USDC is the Stellar Asset Contract for
+`USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`, and the forwarder is Circle's.
+They are listed because the core is built around them and a handler needs the token address to
+compile. Both are fixed for the life of this deployment.
 
 ## Authorization
 

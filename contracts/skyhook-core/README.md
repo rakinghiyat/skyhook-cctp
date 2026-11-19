@@ -38,6 +38,9 @@ call arguments, since you're written for one specific core.
 pub fn __constructor(env: Env, core: Address, token: Address) { /* store both, immutably */ }
 ```
 
+Both values are in the root [README](../../README.md): `skyhook-core` and USDC, under the
+deployed addresses.
+
 Why not just receive the funds first? A panic only rolls back your own frame, not the caller's.
 Funds moved by the core would stay with you after you rejected them. Pulling inside your own call
 means a panic undoes the transfer too.

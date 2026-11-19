@@ -106,8 +106,8 @@ export default function ClaimPage() {
       <h1 className="text-3xl font-semibold tracking-tight">Claim what is held for you</h1>
       <p className="mt-3 text-lg leading-relaxed text-gray-600">
         When USDC arrives for someone who cannot yet receive it, Skyhook holds it rather than
-        letting the transfer fail. This is where you collect it. The fee is paid for you, so you
-        need no XLM of your own.
+        letting the transfer fail. This is where you collect it. The claim fee is paid for you.
+        You still need a USDC trustline, and Stellar locks a small XLM reserve for that.
       </p>
 
       {!address && (

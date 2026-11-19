@@ -63,6 +63,17 @@ SKYHOOK_CORE_ID=CCOMST7FEDLYJ5MXZTVKVKMK43AQP2U2AZEZRHE3XHYO6UF6LKC2654F
 RELAYER_SECRET_KEY=S...
 ```
 
+Worth adding one more line even though the relayer ignores it:
+
+```bash
+STELLAR_NETWORK_PASSPHRASE="Test SDF Network ; September 2015"
+```
+
+The relayer defaults to Testnet and never reads it. The Stellar CLI does. Run `stellar contract
+invoke` in this directory and it picks up `STELLAR_RPC_URL` from the `.env`, which makes it stop
+asking the network preset and start asking for a passphrase. Setting it here means CLI calls and
+the relayer work side by side out of the same file.
+
 ## If attestation fetches fail TLS verification
 
 Some networks hijack DNS for whole domains and return their own filter, which shows its own
