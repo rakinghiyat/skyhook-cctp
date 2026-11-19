@@ -14,7 +14,7 @@ npm install @skyhook-cctp/sdk
 
 ## Before you start
 
-Two things the SDK cannot get for you.
+Three things the SDK cannot get for you.
 
 **USDC on the source chain.** Arc Testnet uses USDC as its native gas token, so a single balance
 covers both the amount you burn and the fee it costs to burn it. There is no second token to
@@ -29,8 +29,50 @@ needed, but there is a reCAPTCHA, so it cannot be scripted into your setup.
 
 **A funded Stellar account** for whoever submits the execution, because the relayer pays the
 Soroban fee. On Testnet [friendbot](https://friendbot.stellar.org) funds one immediately. Leave
-room: an invocation against contracts that have gone cold pays to restore them from archive and
-has cost over 1.2 XLM, against roughly 0.002 XLM when they are warm.
+room: an invocation against contracts that have gone cold pays to restore them from archive.
+Measured runs have cost 1.2 to 2.5 XLM, against roughly 0.002 XLM when they are warm.
+
+**Two tools.** Step 2 signs a transaction on the source chain, so you need a wallet library. The
+examples below use [viem](https://viem.sh). Step 4 reads balances with the
+[Stellar CLI](https://developers.stellar.org/docs/tools/developer-tools/cli), a separate install.
+
+## Deployed addresses
+
+Testnet. The code below refers to these by name.
+
+| What | Chain | Address |
+|---|---|---|
+| `USDC` | Arc Testnet | `0x3600000000000000000000000000000000000000` |
+| `TOKEN_MESSENGER` | Arc Testnet | `0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA` |
+| Forwarder | Stellar Testnet | `CA66Q2WFBND6V4UEB7RD4SAXSVIWMD6RA4X3U32ELVFGXV5PJK4T4VSZ` |
+| Skyhook core | Stellar Testnet | `CCOMST7FEDLYJ5MXZTVKVKMK43AQP2U2AZEZRHE3XHYO6UF6LKC2654F` |
+| Reference SEP-56 vault | Stellar Testnet | `CAY6UNOOWATJW2LXFGMTO6NKLJRVWRKMNVZVPGLKRBLE5Y6OFMDF7IB4` |
+
+Arc publishes a `TokenMessengerWithFees` as well. Use the `TokenMessengerV2` address above.
+Circle's [Arc reference](https://docs.arc.io/arc/references/contract-addresses.md) is the source
+for both Arc addresses.
+
+The block explorer will not give you the ABI: that address is a proxy, so its verified ABI has no
+`depositForBurnWithHook` in it. Here is the fragment you need.
+
+```js
+const tokenMessengerAbi = [{
+  name: "depositForBurnWithHook",
+  type: "function",
+  stateMutability: "nonpayable",
+  inputs: [
+    { name: "amount",               type: "uint256" },
+    { name: "destinationDomain",    type: "uint32"  },
+    { name: "mintRecipient",        type: "bytes32" },
+    { name: "burnToken",            type: "address" },
+    { name: "destinationCaller",    type: "bytes32" },
+    { name: "maxFee",               type: "uint256" },
+    { name: "minFinalityThreshold", type: "uint32"  },
+    { name: "hookData",             type: "bytes"   },
+  ],
+  outputs: [],
+}];
+```
 
 ## The shortest path
 
@@ -76,12 +118,23 @@ const burn = buildBurnParameters({
   amount: 1_000_000n,   // 6 decimals, as USDC is on the source chain
   forwarder: "CA66Q2WFBND6V4UEB7RD4SAXSVIWMD6RA4X3U32ELVFGXV5PJK4T4VSZ",
   forwardRecipient: SKYHOOK_CORE,   // where the instruction is executed
-  burnToken: USDC,                  // USDC's address on the source chain
+  burnToken: USDC,                  // from Deployed addresses
   instruction,                      // from step 1
 });
 
+// CCTP pulls the USDC with transferFrom, so approve the TokenMessenger first.
+// Without this the burn reverts with "ERC20: transfer amount exceeds allowance".
 await walletClient.writeContract({
-  address: TOKEN_MESSENGER,         // Circle's TokenMessengerV2 on the source chain
+  address: USDC,
+  abi: [{ name: "approve", type: "function", stateMutability: "nonpayable",
+          inputs: [{ type: "address" }, { type: "uint256" }],
+          outputs: [{ type: "bool" }] }],
+  functionName: "approve",
+  args: [TOKEN_MESSENGER, 1_000_000n],
+});
+
+await walletClient.writeContract({
+  address: TOKEN_MESSENGER,         // from Deployed addresses
   abi: tokenMessengerAbi,
   functionName: "depositForBurnWithHook",
   args: burn.args,                  // already in the ABI's order
@@ -146,6 +199,10 @@ stellar contract invoke --id <handler-hold> --source <any-funded-account> \
 
 Both calls are read-only (`--send=no`), free, and anyone can run them. You don't need the
 recipient's key.
+
+Run them next to the relayer's `.env` and the Stellar CLI reads `STELLAR_RPC_URL` from it, then
+asks for a network passphrase. Either add `--network-passphrase "Test SDF Network ; September
+2015"`, or run them from another directory.
 
 ## Reading a message back
 
