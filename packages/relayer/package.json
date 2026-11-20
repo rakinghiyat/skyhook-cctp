@@ -1,6 +1,6 @@
 {
   "name": "@skyhook-cctp/relayer",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Take one CCTP burn all the way to Stellar: wait for Circle's attestation, re-attest if it never reached finality, and submit Skyhook.execute so the arriving USDC runs its instruction.",
   "license": "Apache-2.0",
   "type": "module",
