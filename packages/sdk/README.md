@@ -28,9 +28,18 @@ needed, but there is a reCAPTCHA, so it cannot be scripted into your setup.
 > 9.9.9.9 reaches the real host.
 
 **A funded Stellar account** for whoever submits the execution, because the relayer pays the
-Soroban fee. On Testnet [friendbot](https://friendbot.stellar.org) funds one immediately. Leave
-room: an invocation against contracts that have gone cold pays to restore them from archive.
-Measured runs have cost 1.2 to 2.5 XLM, against roughly 0.002 XLM when they are warm.
+Soroban fee. [Friendbot](https://friendbot.stellar.org) funds an address on Testnet, but it can't
+invent one, so make the key first. The Stellar CLI below does both, and prints the `S...` secret
+the relayer wants in `RELAYER_SECRET_KEY`:
+
+```bash
+stellar keys generate my-relayer --network testnet --fund
+stellar keys secret my-relayer
+```
+
+Leave room in it: an invocation against contracts that have gone cold pays to restore them from
+archive. Measured cold runs have cost 1.2 to 2.5 XLM. Warm is far cheaper, and varies with how
+much the instruction touches: 0.0089846 XLM for a Deposit through a vault, 0.0017 for a claim.
 
 **Two tools.** Step 2 signs a transaction on the source chain, so you need a wallet library. The
 examples below use [viem](https://viem.sh). Step 4 reads balances with the

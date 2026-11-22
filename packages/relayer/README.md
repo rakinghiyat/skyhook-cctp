@@ -50,7 +50,7 @@ value came from.
 | `STELLAR_RPC_URL` | Soroban RPC endpoint |
 | `STELLAR_HORIZON_URL` | Horizon endpoint, used to read the account before submitting |
 | `SKYHOOK_CORE_ID` | The core contract to submit to |
-| `RELAYER_SECRET_KEY` | Pays the invocation fee, from its own account. Any funded Stellar key; on Testnet [friendbot](https://friendbot.stellar.org) funds one in a second. In a clone of the repository, `./scripts/fill-stellar-keys.sh` fills it from the Stellar CLI keystore. |
+| `RELAYER_SECRET_KEY` | Pays the invocation fee, from its own account. Any funded Stellar key. `stellar keys generate my-relayer --network testnet --fund` makes and funds one, then `stellar keys secret my-relayer` prints the `S...` to paste here. In a clone of the repository, `./scripts/fill-stellar-keys.sh` fills it from the Stellar CLI keystore. |
 
 All six are required. A working Testnet `.env`, with Arc as the source chain:
 

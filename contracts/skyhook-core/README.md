@@ -83,6 +83,52 @@ Also:
   treats that as a refusal.
 - **Stay deterministic.** Don't depend on the ledger timestamp or sequence number.
 
+### Building and deploying it
+
+A handler is its own crate, outside this workspace. What makes it a Soroban contract rather than
+an ordinary Rust library is `crate-type`, and the code has to live in `src/lib.rs` or cargo won't
+find it:
+
+```toml
+[package]
+name = "my-handler"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+soroban-sdk = "27"
+
+[profile.release]
+overflow-checks = true
+panic = "abort"
+strip = "symbols"
+lto = true
+```
+
+You need `rustup`, the `wasm32v1-none` target and the Stellar CLI. Built against soroban-sdk 27
+and CLI 27.1.
+
+```bash
+rustup target add wasm32v1-none
+stellar contract build
+```
+
+Then deploy. The constructor arguments go after the `--`, which is the one part of this that
+isn't guessable:
+
+```bash
+stellar contract deploy \
+  --wasm target/wasm32v1-none/release/my_handler.wasm \
+  --source my-key --network testnet \
+  -- --core <skyhook-core> --token <USDC>
+```
+
+Both addresses are in the root [README](../../README.md), under the deployed ones. The hyphen in
+the crate name becomes an underscore in the wasm filename.
+
 ### Registering
 
 ```rust

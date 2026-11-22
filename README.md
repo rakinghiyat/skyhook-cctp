@@ -42,6 +42,7 @@ to have before the first line of code.
 | Send USDC that does something on arrival | [Integration guide](packages/sdk/README.md), `@skyhook-cctp/sdk` |
 | Write a new handler | [Handler authoring](contracts/skyhook-core/README.md) |
 | Run a relayer | [Relayer](packages/relayer/README.md), `@skyhook-cctp/relayer` |
+| Run the whole flow from a clone, not from npm | The scripts under [Repository](#repository) below |
 | Understand the format itself | [Instruction format](#instruction-format) below |
 
 ## How it works
@@ -194,8 +195,21 @@ contracts/
   reference-vault/   a self-deployed OpenZeppelin vault, for testing and the demo
 packages/
   sdk/               payload builder and message parser
+    scripts/         runnable end-to-end scripts, clone only; not in the npm package
   relayer/           polls Circle, submits execution
 ```
+
+Three of those scripts are the shortest path through the whole flow, and they only exist in a
+clone:
+
+| Script | What it does |
+|---|---|
+| `packages/sdk/scripts/generate-arc-key.js` | Makes an Arc Testnet key and writes it into `.env`. Never prints the secret |
+| `packages/sdk/scripts/e2e-burn.js` | One burn on Arc through to execution on Stellar, against the deployed core |
+| `packages/sdk/scripts/sponsored-claim.js` | A claim from the command line: the recipient signs, the sponsor pays the fee |
+
+They read the same `.env` as the relayer, so fill that first. The `gate-*` and `verify-*` scripts
+beside them are the Week 1 gate's own checks, kept because the findings cite them.
 
 ```bash
 cargo test --workspace     # contracts
