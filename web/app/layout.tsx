@@ -2,6 +2,7 @@ import { RootProvider } from 'fumadocs-ui/provider/next';
 import './global.css';
 import { Figtree } from 'next/font/google';
 import type { Metadata } from 'next';
+import { Analytics } from '@vercel/analytics/next';
 
 // Circle uses Circular XX, a licensed font. Figtree is the closest free match: geometric,
 // double-storey `a`, single-storey `g`, tall x-height.
@@ -33,6 +34,7 @@ export default function Layout({ children }: LayoutProps<'/'>) {
         {/* Light by default, since the brand was designed on white. Docs readers can still
             switch to dark. */}
         <RootProvider theme={{ defaultTheme: 'light' }}>{children}</RootProvider>
+        <Analytics />
       </body>
     </html>
   );
