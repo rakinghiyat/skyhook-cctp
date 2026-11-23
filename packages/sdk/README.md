@@ -169,6 +169,101 @@ Want to build the call yourself? `burn` also has each parameter by name (`amount
 `destinationDomain`, `mintRecipient`, `burnToken`, `destinationCaller`, `maxFee`,
 `minFinalityThreshold`, `hookData`), with addresses already `bytes32`-encoded.
 
+### Steps 1 and 2 as one file
+
+The snippets above leave the viem setup to you, because every app already has its own. If you
+just want something that runs, this is both steps in one file. Save it as `burn.mjs`:
+
+```js
+import { buildInstruction, depositParams, buildBurnParameters } from "@skyhook-cctp/sdk";
+import { createWalletClient, createPublicClient, http } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { arcTestnet } from "viem/chains";
+
+const USDC            = "0x3600000000000000000000000000000000000000";
+const TOKEN_MESSENGER = "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA";
+const FORWARDER       = "CA66Q2WFBND6V4UEB7RD4SAXSVIWMD6RA4X3U32ELVFGXV5PJK4T4VSZ";
+const SKYHOOK_CORE    = "CCOMST7FEDLYJ5MXZTVKVKMK43AQP2U2AZEZRHE3XHYO6UF6LKC2654F";
+const VAULT           = "CAY6UNOOWATJW2LXFGMTO6NKLJRVWRKMNVZVPGLKRBLE5Y6OFMDF7IB4";
+
+const amount = 1_000_000n;   // 1 USDC, 6 decimals on the source chain
+
+const tokenMessengerAbi = [{
+  name: "depositForBurnWithHook",
+  type: "function",
+  stateMutability: "nonpayable",
+  inputs: [
+    { name: "amount",               type: "uint256" },
+    { name: "destinationDomain",    type: "uint32"  },
+    { name: "mintRecipient",        type: "bytes32" },
+    { name: "burnToken",            type: "address" },
+    { name: "destinationCaller",    type: "bytes32" },
+    { name: "maxFee",               type: "uint256" },
+    { name: "minFinalityThreshold", type: "uint32"  },
+    { name: "hookData",             type: "bytes"   },
+  ],
+  outputs: [],
+}];
+
+const approveAbi = [{
+  name: "approve",
+  type: "function",
+  stateMutability: "nonpayable",
+  inputs: [{ type: "address" }, { type: "uint256" }],
+  outputs: [{ type: "bool" }],
+}];
+
+// The viem setup: an account from your key, and a chain to send on.
+const account = privateKeyToAccount(process.env.SOURCE_PRIVATE_KEY);
+const wallet  = createWalletClient({ account, chain: arcTestnet, transport: http() });
+const client  = createPublicClient({ chain: arcTestnet, transport: http() });
+
+// 1. The instruction: deposit into the vault for this recipient.
+const instruction = buildInstruction(process.env.RECIPIENT, 1, depositParams(VAULT));
+
+// 2. The burn parameters, checked before anything is signed.
+const burn = buildBurnParameters({
+  amount,
+  forwarder: FORWARDER,
+  forwardRecipient: SKYHOOK_CORE,
+  burnToken: USDC,
+  instruction,
+});
+
+// CCTP pulls the USDC with transferFrom, so approve first.
+const approveHash = await wallet.writeContract({
+  address: USDC, abi: approveAbi, functionName: "approve",
+  args: [TOKEN_MESSENGER, amount],
+});
+await client.waitForTransactionReceipt({ hash: approveHash });
+
+const burnHash = await wallet.writeContract({
+  address: TOKEN_MESSENGER, abi: tokenMessengerAbi,
+  functionName: "depositForBurnWithHook",
+  args: burn.args,
+});
+await client.waitForTransactionReceipt({ hash: burnHash });
+
+console.log("burned:", burnHash);
+console.log("now relay it:  npx @skyhook-cctp/relayer", burnHash);
+```
+
+It reads two values from the same `.env` the relayer uses, so add them there:
+
+```bash
+RECIPIENT=G...              # who ends up holding the vault shares
+SOURCE_PRIVATE_KEY=0x...    # the Arc key holding the USDC
+```
+
+Then run it. `--env-file` needs Node 22 or newer:
+
+```bash
+npm install @skyhook-cctp/sdk viem
+node --env-file=.env burn.mjs
+```
+
+It prints the burn hash and the exact relayer command for step 3.
+
 ### 3. Relay it
 
 The instruction doesn't run until someone submits it, because the forwarder only credits. Run
