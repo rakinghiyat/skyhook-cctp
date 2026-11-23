@@ -1,4 +1,5 @@
 import { RootProvider } from 'fumadocs-ui/provider/next';
+import { Analytics } from '@vercel/analytics/next';
 import './global.css';
 import { Figtree } from 'next/font/google';
 import type { Metadata } from 'next';
@@ -33,6 +34,8 @@ export default function Layout({ children }: LayoutProps<'/'>) {
         {/* Light by default, since the brand was designed on white. Docs readers can still
             switch to dark. */}
         <RootProvider theme={{ defaultTheme: 'light' }}>{children}</RootProvider>
+        {/* Visitor counts. Cookieless, and it sends nothing in development. */}
+        <Analytics />
       </body>
     </html>
   );
